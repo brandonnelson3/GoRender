@@ -5,12 +5,12 @@ import (
 	"runtime"
 
 	"github.com/brandonnelson3/GoRender/camera"
-
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 const (
@@ -45,13 +45,25 @@ func main() {
 		panic(err)
 	}
 
+	gfx.InitRenderer()
 	camera.InitCameras()
+
+	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
+	for x := 0; x < 10; x++ {
+		for z := 0; z < 10; z++ {
+			r := gfx.NewRenderable(gfx.CubeVertices)
+			r.Position = mgl32.Vec3{float32(4 * x), 5.0, float32(4 * z)}
+			renderables = append(renderables, r)
+		}
+	}
 
 	for !gfx.Window.ShouldClose() {
 		StartOfFrame()
 
 		input.Update()
 		camera.Active.Update(GetPreviousFrameLength())
+
+		gfx.Renderer.Render(renderables)
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()
