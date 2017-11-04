@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/brandonnelson3/GoRender/messagebus"
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
@@ -15,7 +16,7 @@ type w struct {
 	nearPlane, farPlane float32
 	fieldOfViewDegrees  float32
 
-	window *glfw.Window
+	*glfw.Window
 }
 
 // CreateWindow instantiates and opens a new window with opengl. This is stored in the global package variable.
@@ -29,13 +30,17 @@ func CreateWindow(title string, width, height int, near, far, fov float32) {
 	if err != nil {
 		panic(err)
 	}
-	window.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
-	Window = w{
-		width:              width,
-		height:             height,
-		nearPlane:          near,
-		farPlane:           far,
-		fieldOfViewDegrees: fov,
-		window:             window,
+	Window = w{width, height, near, far, fov, window}
+
+	messagebus.RegisterType("key", handleEscape)
+}
+
+func handleEscape(m *messagebus.Message) {
+	pressedKeys := m.Data1.([]glfw.Key)
+
+	for _, key := range pressedKeys {
+		if key == glfw.KeyEscape {
+			Window.SetShouldClose(true)
+		}
 	}
 }

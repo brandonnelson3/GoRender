@@ -5,7 +5,9 @@ import (
 	"runtime"
 
 	"github.com/brandonnelson3/GoRender/gfx"
+	"github.com/brandonnelson3/GoRender/input"
 
+	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
@@ -30,4 +32,20 @@ func main() {
 	defer glfw.Terminate()
 
 	gfx.CreateWindow(windowTitle, windowWidth, windowHeight, windowFOV, windowNear, windowFar)
+	gfx.Window.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
+	gfx.Window.SetKeyCallback(input.KeyCallBack)
+	gfx.Window.SetMouseButtonCallback(input.MouseButtonCallback)
+	gfx.Window.SetCursorPosCallback(input.CursorPosCallback)
+	gfx.Window.MakeContextCurrent()
+
+	if err := gl.Init(); err != nil {
+		panic(err)
+	}
+
+	for !gfx.Window.ShouldClose() {
+		input.Update()
+
+		gfx.Window.SwapBuffers()
+		glfw.PollEvents()
+	}
 }
