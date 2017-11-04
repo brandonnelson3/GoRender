@@ -37,6 +37,7 @@ func main() {
 	gfx.Window.SetMouseButtonCallback(input.MouseButtonCallback)
 	gfx.Window.SetCursorPosCallback(input.CursorPosCallback)
 	gfx.Window.MakeContextCurrent()
+	gfx.Window.RecenterCursor()
 
 	if err := gl.Init(); err != nil {
 		panic(err)
@@ -49,7 +50,7 @@ func main() {
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()
-
+		gfx.Window.RecenterCursor()
 		EndOfFrame()
 	}
 }

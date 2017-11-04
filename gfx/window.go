@@ -45,3 +45,8 @@ func handleEscape(m *messagebus.Message) {
 		}
 	}
 }
+
+// RecenterCursor recenters the mouse in this window.
+func (window *w) RecenterCursor() {
+	window.SetCursorPos(float64(window.width)/2, float64(window.height)/2)
+}
