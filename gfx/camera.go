@@ -1,10 +1,9 @@
-package camera
+package gfx
 
 import (
 	"fmt"
 	"math"
 
-	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
@@ -97,14 +96,14 @@ func (c *camera) handleMovement(m *messagebus.Message) {
 
 func (c *camera) handleMouse(m *messagebus.Message) {
 	mouseInput := m.Data1.(input.MouseInput)
-	c.verticalAngle -= c.sensitivity * float32(mouseInput.Y-float64(gfx.Window.Height)/2)
+	c.verticalAngle -= c.sensitivity * float32(mouseInput.Y-float64(Window.Height)/2)
 	if c.verticalAngle < -pi2 {
 		c.verticalAngle = float32(-pi2 + 0.0001)
 	}
 	if c.verticalAngle > pi2 {
 		c.verticalAngle = float32(pi2 - 0.0001)
 	}
-	c.horizontalAngle -= c.sensitivity * float32(mouseInput.X-float64(gfx.Window.Width)/2)
+	c.horizontalAngle -= c.sensitivity * float32(mouseInput.X-float64(Window.Width)/2)
 	for c.horizontalAngle < 0 {
 		c.horizontalAngle += float32(2 * math.Pi)
 	}

@@ -4,7 +4,6 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/brandonnelson3/GoRender/camera"
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
@@ -46,7 +45,7 @@ func main() {
 	}
 
 	gfx.InitRenderer()
-	camera.InitCameras()
+	gfx.InitCameras()
 
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
 	for x := 0; x < 10; x++ {
@@ -61,7 +60,7 @@ func main() {
 		StartOfFrame()
 
 		input.Update()
-		camera.Active.Update(GetPreviousFrameLength())
+		gfx.Active.Update(GetPreviousFrameLength())
 
 		gfx.Renderer.Render(renderables)
 
