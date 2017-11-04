@@ -35,7 +35,7 @@ func NewRenderable(verticies []Vertex) *Renderable {
 	}
 }
 
-func (r *Renderable) GetWorldMatrix() mgl32.Mat4 {
+func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
 	return r.Scale.Mul4(r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
 }
 
