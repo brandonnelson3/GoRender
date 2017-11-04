@@ -7,7 +7,7 @@ import (
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
-	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
 

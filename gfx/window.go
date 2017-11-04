@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"github.com/brandonnelson3/GoRender/messagebus"
+
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
