@@ -4,6 +4,8 @@ import (
 	"log"
 	"runtime"
 
+	"github.com/brandonnelson3/GoRender/camera"
+
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
@@ -43,10 +45,13 @@ func main() {
 		panic(err)
 	}
 
+	camera.InitCameras()
+
 	for !gfx.Window.ShouldClose() {
 		StartOfFrame()
 
 		input.Update()
+		camera.Active.Update(GetPreviousFrameLength())
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()

@@ -13,7 +13,7 @@ var (
 
 // Window is GoRender's primary Window representation. This class is a wrapper around an opengl glfw window, and GoRender specific functionality.
 type w struct {
-	width, height       int
+	Width, Height       int
 	nearPlane, farPlane float32
 	fieldOfViewDegrees  float32
 
@@ -48,5 +48,5 @@ func handleEscape(m *messagebus.Message) {
 
 // RecenterCursor recenters the mouse in this window.
 func (window *w) RecenterCursor() {
-	window.SetCursorPos(float64(window.width)/2, float64(window.height)/2)
+	window.SetCursorPos(float64(window.Width)/2, float64(window.Height)/2)
 }
