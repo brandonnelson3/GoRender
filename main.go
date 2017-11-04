@@ -43,9 +43,13 @@ func main() {
 	}
 
 	for !gfx.Window.ShouldClose() {
+		StartOfFrame()
+
 		input.Update()
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()
+
+		EndOfFrame()
 	}
 }
