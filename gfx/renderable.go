@@ -5,6 +5,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
+// Renderable is a object wrapping around something that is renderable. This struct contains all of the settings and elements needed to render something.
 type Renderable struct {
 	vao uint32
 
@@ -15,6 +16,7 @@ type Renderable struct {
 	vertCount   int32
 }
 
+// NewRenderable instantiates a Renderable for the given verticies.
 func NewRenderable(verticies []Vertex) *Renderable {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
@@ -37,15 +39,18 @@ func NewRenderable(verticies []Vertex) *Renderable {
 	}
 }
 
+// GetModelMatrix returns this renderable's final model transform matrix.
 func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
 	return r.Scale.Mul4(r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
 }
 
+// Render bind's this renderable's VAO and draws.
 func (r *Renderable) Render() {
 	gl.BindVertexArray(r.vao)
 	gl.DrawArrays(r.renderStyle, 0, r.vertCount)
 }
 
+// PlaneVertices is the vertex list for a Plane.
 var PlaneVertices = []Vertex{
 	{mgl32.Vec3{-1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 0}},
 	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
@@ -55,6 +60,7 @@ var PlaneVertices = []Vertex{
 	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
 }
 
+// CubeVertices is the vertex list for a Cube.
 var CubeVertices = []Vertex{
 	//  X, Y, Z
 	// Bottom

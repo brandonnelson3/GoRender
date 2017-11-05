@@ -11,13 +11,11 @@ import (
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
-const (
-	TileSize = 16
-)
+// TileSize is the size in pixels of a tile for this renderer.
+const TileSize = 16
 
-var (
-	Renderer r
-)
+// Renderer is the global instance of a Renderer.
+var Renderer r
 
 type r struct {
 	depthShaderPipeline uint32
@@ -36,6 +34,7 @@ type r struct {
 	diffuseTexture, sandTexture uint32
 }
 
+// InitRenderer instanciates the global Renderer instance.
 func InitRenderer() {
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LESS)
@@ -151,7 +150,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
-	renderer.depthVertexShader.View.Set(Active.GetView())
+	renderer.depthVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.depthVertexShader.Projection.Set(Window.GetProjection())
 	for _, renderable := range renderables {
 		renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
@@ -160,7 +159,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 
 	// Step 2: Light Culling
 	renderer.lightCullingShader.Use()
-	renderer.lightCullingShader.View.Set(Active.GetView())
+	renderer.lightCullingShader.View.Set(ActiveCamera.GetView())
 	renderer.lightCullingShader.Projection.Set(Window.GetProjection())
 	renderer.lightCullingShader.DepthMap.Set(gl.TEXTURE4, 4, renderer.depthMap)
 	renderer.lightCullingShader.ScreenSize.Set(uniforms.UIVec2{Window.Width, Window.Height})
@@ -174,7 +173,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	gl.BindProgramPipeline(renderer.colorShaderPipeline)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	renderer.colorVertexShader.View.Set(Active.GetView())
+	renderer.colorVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.colorVertexShader.Projection.Set(Window.GetProjection())
 	renderer.colorFragmentShader.NumTilesX.Set(getNumTilesX())
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())

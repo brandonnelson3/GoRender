@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	_ "image/png"
+	_ "image/png" // Required for image/png to work..
 	"os"
 
 	"github.com/go-gl/gl/v4.5-core/gl"

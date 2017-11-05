@@ -18,9 +18,12 @@ const (
 )
 
 var (
+	// FirstPerson is the "main" camera in the scene.
 	FirstPerson *camera
+	// ThirdPerson is a "secondary" camera in the scene, mainly for observing the world around the FirstPerson camera.
 	ThirdPerson *camera
-	Active      *camera
+	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
+	ActiveCamera *camera
 )
 
 type camera struct {
@@ -36,24 +39,24 @@ type camera struct {
 func InitCameras() {
 	FirstPerson = &camera{position: mgl32.Vec3{0, 6, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
 	ThirdPerson = &camera{position: mgl32.Vec3{0, 6, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
-	Active = FirstPerson
-	messagebus.RegisterType("key", Active.handleMovement)
-	messagebus.RegisterType("mouse", Active.handleMouse)
+	ActiveCamera = FirstPerson
+	messagebus.RegisterType("key", ActiveCamera.handleMovement)
+	messagebus.RegisterType("mouse", ActiveCamera.handleMouse)
 
 	go updateConsoleOnTimer()
 }
 
 func updateConsoleOnTimer() {
 	for range time.Tick(time.Millisecond * 100) {
-		cameraPosition := Active.GetPosition()
+		cameraPosition := ActiveCamera.GetPosition()
 		cameraPositionValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraPosition.X(), cameraPosition.Y(), cameraPosition.Z())
 		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_position", Data2: cameraPositionValue})
 
-		cameraForward := Active.GetForward()
+		cameraForward := ActiveCamera.GetForward()
 		cameraForwardValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraForward.X(), cameraForward.Y(), cameraForward.Z())
 		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_forward", Data2: cameraForwardValue})
 
-		cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", Active.horizontalAngle, Active.verticalAngle)
+		cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", ActiveCamera.horizontalAngle, ActiveCamera.verticalAngle)
 		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_angle", Data2: cameraAngleValue})
 	}
 }
