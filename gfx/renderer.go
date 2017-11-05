@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
+	"github.com/brandonnelson3/GoRender/gfx/uniforms"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
@@ -30,6 +31,9 @@ type r struct {
 	colorFragmentShader *shaders.ColorFragmentShader
 
 	depthMapFBO, depthMap uint32
+
+	// TODO fix this and do something much better...
+	diffuseTexture, sandTexture uint32
 }
 
 func InitRenderer() {
@@ -100,6 +104,17 @@ func InitRenderer() {
 	gl.ReadBuffer(gl.NONE)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
+	// TODO this should not be in renderer... probably should have some asset loading manager instead.
+	diffuseTexture, err := NewFromPng("assets/crate1_diffuse.png")
+	if err != nil {
+		panic(err)
+	}
+
+	sandTexture, err := NewFromPng("assets/sand.png")
+	if err != nil {
+		panic(err)
+	}
+
 	Renderer = r{
 		depthShaderPipeline: dsp,
 		depthVertexShader:   dvs,
@@ -110,6 +125,9 @@ func InitRenderer() {
 		colorFragmentShader: cfs,
 		depthMapFBO:         depthMapFBO,
 		depthMap:            depthMap,
+		// TODO remove these...
+		diffuseTexture: diffuseTexture,
+		sandTexture:    sandTexture,
 	}
 }
 
@@ -130,7 +148,7 @@ func getTotalNumTiles() uint32 {
 
 func (renderer *r) Render(renderables []*Renderable) {
 	// Step 1: Depth Pass for pointlight culling
-	/*gl.BindProgramPipeline(renderer.depthShaderPipeline)
+	gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
 	renderer.depthVertexShader.View.Set(Active.GetView())
@@ -150,7 +168,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.lightCullingShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.lightCullingShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
-	gl.UseProgram(0)*/
+	gl.UseProgram(0)
 
 	// Step 3: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
@@ -162,7 +180,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
-	//renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, diffuseTexture)
+	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
 		renderable.Render()
