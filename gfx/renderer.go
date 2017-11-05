@@ -156,7 +156,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
 		// TODO: This should be set by key input only, not every frame. Right now UVs only.
-		renderer.colorFragmentShader.RenderMode.Set(4)
+		renderer.colorFragmentShader.RenderMode.Set(2)
 		renderable.Render()
 	}
 }
