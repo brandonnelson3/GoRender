@@ -4,8 +4,10 @@ import (
 	"log"
 
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
+	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
+	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
 const (
@@ -71,6 +73,14 @@ func InitRenderer() {
 	cfs.AddToPipeline(csp)
 	gl.ValidateProgramPipeline(csp)
 	cvs.BindVertexAttributes()
+	messagebus.RegisterType("key", func(m *messagebus.Message) {
+		pressedKeys := m.Data1.([]glfw.Key)
+		for _, key := range pressedKeys {
+			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
+				cfs.RenderMode.Set(int32(key - glfw.KeyF1))
+			}
+		}
+	})
 
 	var depthMapFBO uint32
 	gl.GenFramebuffers(1, &depthMapFBO)
@@ -155,8 +165,6 @@ func (renderer *r) Render(renderables []*Renderable) {
 	//renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, diffuseTexture)
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
-		// TODO: This should be set by key input only, not every frame. Right now UVs only.
-		renderer.colorFragmentShader.RenderMode.Set(2)
 		renderable.Render()
 	}
 }
