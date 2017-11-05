@@ -34,7 +34,7 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-	gfx.CreateWindow(windowTitle, windowWidth, windowHeight, windowFOV, windowNear, windowFar)
+	gfx.CreateWindow(windowTitle, windowWidth, windowHeight, windowNear, windowFar, windowFOV)
 	gfx.Window.SetInputMode(glfw.CursorMode, glfw.CursorHidden)
 	gfx.Window.SetKeyCallback(input.KeyCallBack)
 	gfx.Window.SetMouseButtonCallback(input.MouseButtonCallback)
@@ -54,6 +54,8 @@ func main() {
 	for x := 0; x < 10; x++ {
 		for z := 0; z < 2; z++ {
 			r := gfx.NewRenderable(gfx.CubeVertices)
+			r.Rotation = mgl32.Ident4()
+			r.Scale = mgl32.Ident4()
 			r.Position = mgl32.Vec3{float32(4 * x), 5.0, float32(4 * z)}
 			renderables = append(renderables, r)
 		}
