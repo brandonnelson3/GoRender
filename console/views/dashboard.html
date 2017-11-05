@@ -1,0 +1,97 @@
+{{define "hello"}}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>GoRender Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/static/dashboard.js"></script>
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+      /* Ensure layout covers the entire screen. */
+      html {
+        height: 100%;
+      }
+
+      /* Stack toolbar and content on top of each other. */
+      .demo-body {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+        min-height: 100%;
+        background-color: #f8f8f8;
+      }
+
+      /* Place drawer and main next to each other. */
+      .demo-content {
+        display: flex;
+        flex: 1 1 auto;
+        height: 100%;
+        box-sizing: border-box;
+      }
+
+      .demo-main {
+        padding-left: 16px;
+      }
+
+      .demo-card {
+        width: 320px;
+        background-color: white;
+      }
+
+      .mdc-permanent-drawer {
+        background-color: #eeeeee;
+      }
+
+      .extra-content-wrapper {
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body class="mdc-typography demo-body">
+    <header class="mdc-toolbar mdc-toolbar--fixed">
+      <div class="mdc-toolbar__row">
+        <section class="mdc-toolbar__section mdc-toolbar__section--align-start">
+          <span class="mdc-toolbar__title catalog-title">GoRender - Console</span>
+        </section>
+      </div>
+    </header>
+
+    <div class="demo-content mdc-toolbar-fixed-adjust">
+      <nav class="mdc-permanent-drawer">
+        <div class="mdc-list-group">
+          <nav class="mdc-list">
+            <a class="mdc-list-item mdc-permanent-drawer--selected" href="#">
+              <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">dashboard</i>Dashboard
+            </a>
+          </nav>
+        </div>
+      </nav>
+      <main class="demo-main">
+        <h1 class="mdc-typography--display1">Dashboard</h1>
+        <p class="mdc-typography--body1">GoRender Statistics Dashboard</p>
+        <div class="extra-content-wrapper">
+            <div>
+                <div class="mdc-card demo-card">
+                    <section class="mdc-card__primary">
+                        <h1 class="mdc-card__title mdc-card__title--large">Camera Stats</h1>
+                    </section>
+                    <section class="mdc-card__supporting-text">
+                      Position: <span class="camera_position"></span><br>
+                      Forward: <span class="camera_forward"></span><br>
+                      Angle: <span class="camera_angle"></span><br>
+                    </section>
+                </div>
+            </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
+{{end}}

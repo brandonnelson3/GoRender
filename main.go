@@ -4,6 +4,8 @@ import (
 	"log"
 	"runtime"
 
+	"github.com/brandonnelson3/GoRender/console"
+
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
@@ -44,12 +46,13 @@ func main() {
 		panic(err)
 	}
 
+	console.InitConsole()
 	gfx.InitRenderer()
 	gfx.InitCameras()
 
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
 	for x := 0; x < 10; x++ {
-		for z := 0; z < 10; z++ {
+		for z := 0; z < 2; z++ {
 			r := gfx.NewRenderable(gfx.CubeVertices)
 			r.Position = mgl32.Vec3{float32(4 * x), 5.0, float32(4 * z)}
 			renderables = append(renderables, r)

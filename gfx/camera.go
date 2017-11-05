@@ -3,6 +3,7 @@ package gfx
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/brandonnelson3/GoRender/input"
 	"github.com/brandonnelson3/GoRender/messagebus"
@@ -33,11 +34,28 @@ type camera struct {
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
-	FirstPerson = &camera{position: mgl32.Vec3{0, 0, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
-	ThirdPerson = &camera{position: mgl32.Vec3{0, 0, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
+	FirstPerson = &camera{position: mgl32.Vec3{0, 6, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
+	ThirdPerson = &camera{position: mgl32.Vec3{0, 6, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
 	Active = FirstPerson
 	messagebus.RegisterType("key", Active.handleMovement)
 	messagebus.RegisterType("mouse", Active.handleMouse)
+
+	go updateConsoleOnTimer()
+}
+
+func updateConsoleOnTimer() {
+	for range time.Tick(time.Millisecond * 100) {
+		cameraPosition := Active.GetPosition()
+		cameraPositionValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraPosition.X(), cameraPosition.Y(), cameraPosition.Z())
+		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_position", Data2: cameraPositionValue})
+
+		cameraForward := Active.GetForward()
+		cameraForwardValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraForward.X(), cameraForward.Y(), cameraForward.Z())
+		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_forward", Data2: cameraForwardValue})
+
+		cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", Active.horizontalAngle, Active.verticalAngle)
+		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_angle", Data2: cameraAngleValue})
+	}
 }
 
 // Update is called every frame to execute this frame's movement.
@@ -84,13 +102,6 @@ func (c *camera) handleMovement(m *messagebus.Message) {
 			direction = direction.Sub(c.GetRight())
 		}
 	}
-	pressedKeysThisFrame := m.Data2.([]glfw.Key)
-	for _, key := range pressedKeysThisFrame {
-		switch key {
-		case glfw.KeyP:
-			messagebus.SendAsync(&messagebus.Message{System: "Camera", Type: "log", Data1: fmt.Sprintf("position: mgl32.Vec3{%f, %f, %f}, horizontalAngle: %f, verticalAngle: %f", c.position.X(), c.position.Y(), c.position.Z(), c.horizontalAngle, c.verticalAngle)})
-		}
-	}
 	c.direction = direction
 }
 
@@ -106,5 +117,8 @@ func (c *camera) handleMouse(m *messagebus.Message) {
 	c.horizontalAngle -= c.sensitivity * float32(mouseInput.X-float64(Window.Width)/2)
 	for c.horizontalAngle < 0 {
 		c.horizontalAngle += float32(2 * math.Pi)
+	}
+	for c.horizontalAngle > float32(2*math.Pi) {
+		c.horizontalAngle -= float32(2 * math.Pi)
 	}
 }

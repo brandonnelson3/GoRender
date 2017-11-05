@@ -25,6 +25,8 @@ func NewRenderable(verticies []Vertex) *Renderable {
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*8*4, gl.Ptr(verticies), gl.STATIC_DRAW)
 
+	Renderer.colorVertexShader.BindVertexAttributes()
+
 	return &Renderable{
 		vao:         vao,
 		Position:    mgl32.Vec3{0, 0, 0},

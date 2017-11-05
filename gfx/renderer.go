@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
-	"github.com/brandonnelson3/GoRender/gfx/uniforms"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
 )
@@ -121,12 +120,13 @@ func getTotalNumTiles() uint32 {
 
 func (renderer *r) Render(renderables []*Renderable) {
 	// Step 1: Depth Pass for pointlight culling
-	gl.BindProgramPipeline(renderer.depthShaderPipeline)
+	/*gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
 	renderer.depthVertexShader.View.Set(Active.GetView())
 	renderer.depthVertexShader.Projection.Set(Window.GetProjection())
 	for _, renderable := range renderables {
+		renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
 		renderable.Render()
 	}
 
@@ -140,7 +140,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.lightCullingShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.lightCullingShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
-	gl.UseProgram(0)
+	gl.UseProgram(0)*/
 
 	// Step 3: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
@@ -154,6 +154,9 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	//renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, diffuseTexture)
 	for _, renderable := range renderables {
+		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
+		// TODO: This should be set by key input only, not every frame. Right now UVs only.
+		renderer.colorFragmentShader.RenderMode.Set(4)
 		renderable.Render()
 	}
 }
