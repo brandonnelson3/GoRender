@@ -65,7 +65,7 @@ func main() {
 		StartOfFrame()
 
 		input.Update()
-		gfx.Active.Update(GetPreviousFrameLength())
+		gfx.ActiveCamera.Update(GetPreviousFrameLength())
 
 		gfx.Renderer.Render(renderables)
 
