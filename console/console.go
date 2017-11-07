@@ -10,11 +10,13 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+// WebsocketMessage is representative of a single message being sent from the backend to the frontend, or the other direction.
 type WebsocketMessage struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
 }
 
+// InitConsole  starts the dashboard's webserver in a go routine.
 func InitConsole() {
 	go func() {
 		t := &Template{
