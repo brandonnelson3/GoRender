@@ -25,7 +25,7 @@ func InitConsole() {
 		e.Renderer = t
 		e.GET("/ws", websocketHandler)
 		e.GET("/", func(c echo.Context) error {
-			return c.Render(http.StatusOK, "hello", nil)
+			return c.Render(http.StatusOK, "dashboard", nil)
 		})
 		e.Logger.Fatal(e.Start(":8080"))
 	}()

@@ -1,4 +1,4 @@
-{{define "hello"}}
+{{define "dashboard"}}
 <!DOCTYPE html>
 <html>
   <head>
@@ -77,18 +77,16 @@
         <h1 class="mdc-typography--display1">Dashboard</h1>
         <p class="mdc-typography--body1">GoRender Statistics Dashboard</p>
         <div class="extra-content-wrapper">
-            <div>
-                <div class="mdc-card demo-card">
-                    <section class="mdc-card__primary">
-                        <h1 class="mdc-card__title mdc-card__title--large">Camera Stats</h1>
-                    </section>
-                    <section class="mdc-card__supporting-text">
-                      Position: <span class="camera_position"></span><br>
-                      Forward: <span class="camera_forward"></span><br>
-                      Angle: <span class="camera_angle"></span><br>
-                    </section>
-                </div>
-            </div>
+          <div class="mdc-card demo-card">
+            <section class="mdc-card__primary">
+              <h1 class="mdc-card__title mdc-card__title--large">Camera Stats</h1>
+            </section>
+            <section class="mdc-card__supporting-text">
+              Position: <span class="camera_position"></span><br>
+              Forward: <span class="camera_forward"></span><br>
+              Angle: <span class="camera_angle"></span><br>
+            </section>
+          </div>
         </div>
       </main>
     </div>
