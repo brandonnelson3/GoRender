@@ -8,12 +8,34 @@ document.addEventListener("DOMContentLoaded", function() {
     var cameraPositionElement = document.getElementsByClassName('camera_position')[0];
     var cameraForwardElement = document.getElementsByClassName('camera_forward')[0];
     var cameraAngleElement = document.getElementsByClassName('camera_angle')[0];
+    var connectionStatusElement = document.getElementsByClassName('connection_status_img')[0];
 
+    var chart = new SmoothieChart({
+        millisPerPixel:72,
+        grid:{
+            fillStyle:'#ffffff',
+            strokeStyle:'rgba(119,119,119,0.99)',
+            sharpLines:true,
+            verticalSections:7
+        },
+        labels:{
+            fillStyle:'#000000'
+        },
+        minValue:0
+    }),
+    canvas = document.getElementById('fps_counter'),
+    line = new TimeSeries();
+
+    chart.addTimeSeries(line, {lineWidth:2.5,strokeStyle:'#192047',fillStyle:'#303e89'});
+    chart.streamTo(canvas, 551);
+    chart.addTimeSeries(line);
+    
     var ws = null;
     function start(){    
         ws = new WebSocket("ws://localhost:8080/ws");
         ws.onopen = function(){
             console.log('connected!');
+            connectionStatusElement.src = "/static/green_light.png";
         };
         ws.onmessage = function(e){
             var data = JSON.parse(e.data);
@@ -29,9 +51,17 @@ document.addEventListener("DOMContentLoaded", function() {
             if (data.type == "camera_angle") {
                 cameraAngleElement.innerHTML = data.value;
             }
+
+            if (data.type == "timer_fps") {
+                line.append(new Date().getTime(), data.value);
+            }
         };
         ws.onclose = function(){
             console.log('closed!');
+
+            connectionStatusElement.src = "/static/red_light.png";
+
+            line.append(new Date().getTime(), 0);
             //reconnect now
             check();
         };    

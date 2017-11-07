@@ -50,14 +50,14 @@ func updateConsoleOnTimer() {
 	for range time.Tick(time.Millisecond * 100) {
 		cameraPosition := ActiveCamera.GetPosition()
 		cameraPositionValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraPosition.X(), cameraPosition.Y(), cameraPosition.Z())
-		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_position", Data2: cameraPositionValue})
+		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "camera_position", Data2: cameraPositionValue})
 
 		cameraForward := ActiveCamera.GetForward()
 		cameraForwardValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraForward.X(), cameraForward.Y(), cameraForward.Z())
-		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_forward", Data2: cameraForwardValue})
+		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "camera_forward", Data2: cameraForwardValue})
 
 		cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", ActiveCamera.horizontalAngle, ActiveCamera.verticalAngle)
-		messagebus.SendAsync(&messagebus.Message{Type: "camera", Data1: "camera_angle", Data2: cameraAngleValue})
+		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "camera_angle", Data2: cameraAngleValue})
 	}
 }
 

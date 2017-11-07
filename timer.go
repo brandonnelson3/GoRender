@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	numAveragedFrameLengths = 25
+	numAveragedFrameLengths = 100
 	framerateCap            = 105
 )
 
@@ -38,8 +38,10 @@ func sendLogMessagesOnTimer() {
 			continue
 		}
 
-		averageFrameTime, averageFramesPerSecond := calculateFrameDetails()
-		messagebus.SendSync(&messagebus.Message{System: "FrameRate", Type: "log", Data1: fmt.Sprintf("Length: %.3f ms - Avg FPS: %.1f - Limiting framerate to %d", averageFrameTime*1000, averageFramesPerSecond, framerateCap)})
+		_, averageFramesPerSecond := calculateFrameDetails()
+		//cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", ActiveCamera.horizontalAngle, ActiveCamera.verticalAngle)
+		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "timer_fps", Data2: fmt.Sprintf("%f", averageFramesPerSecond)})
+		//messagebus.SendSync(&messagebus.Message{System: "FrameRate", Type: "log", Data1: fmt.Sprintf("Length: %.3f ms - Avg FPS: %.1f - Limiting framerate to %d", averageFrameTime*1000, averageFramesPerSecond, framerateCap)})
 	}
 }
 

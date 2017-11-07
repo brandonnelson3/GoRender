@@ -38,7 +38,7 @@ func websocketHandler(c echo.Context) error {
 		log.Printf("Websocket connected...")
 		defer ws.Close()
 
-		messagebus.RegisterType("camera",
+		messagebus.RegisterType("console",
 			func(m *messagebus.Message) {
 				websocketMessage := &WebsocketMessage{
 					Type:  m.Data1.(string),
@@ -52,6 +52,7 @@ func websocketHandler(c echo.Context) error {
 			websocketMessage := WebsocketMessage{}
 			if err := websocket.JSON.Receive(ws, websocketMessage); err != nil {
 				log.Printf("Recieve error from websocket: %v", err)
+				return
 			}
 
 			log.Printf("Got message: %v", websocketMessage)
