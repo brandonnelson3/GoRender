@@ -49,6 +49,8 @@ func main() {
 	console.InitConsole()
 	gfx.InitRenderer()
 	gfx.InitCameras()
+	gfx.InitPointLights()
+	gfx.InitDirectionalLights()
 
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
 	for x := 0; x < 10; x++ {
