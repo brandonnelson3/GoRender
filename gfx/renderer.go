@@ -157,7 +157,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 		renderable.Render()
 	}
 
-	// Step 2: Light Culling
+	// Step 2: Light culling
 	renderer.lightCullingShader.Use()
 	renderer.lightCullingShader.View.Set(ActiveCamera.GetView())
 	renderer.lightCullingShader.Projection.Set(Window.GetProjection())

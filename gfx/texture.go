@@ -1,22 +1,23 @@
 package gfx
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/draw"
 	_ "image/png" // Required for image/png to work..
-	"os"
 
+	"github.com/brandonnelson3/GoRender/loader"
 	"github.com/go-gl/gl/v4.5-core/gl"
 )
 
 // NewFromPng builds a texture from the provided Png file.
 func NewFromPng(file string) (uint32, error) {
-	imgFile, err := os.Open(file)
+	b, err := loader.Load(file)
 	if err != nil {
-		return 0, fmt.Errorf("texture %q not found on disk: %v", file, err)
+		return 0, err
 	}
-	img, _, err := image.Decode(imgFile)
+	img, _, err := image.Decode(bytes.NewReader(b))
 	if err != nil {
 		return 0, err
 	}

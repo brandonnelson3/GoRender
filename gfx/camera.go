@@ -38,9 +38,22 @@ type camera struct {
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
 	FirstPerson = &camera{position: mgl32.Vec3{0, 9, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
-	ThirdPerson = &camera{position: mgl32.Vec3{0, 9, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
+	ThirdPerson = &camera{position: mgl32.Vec3{0, 7, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
 	ActiveCamera = FirstPerson
 	messagebus.RegisterType("key", ActiveCamera.handleMovement)
+	messagebus.RegisterType("key", func(m *messagebus.Message) {
+		pressedKeysThisFrame := m.Data2.([]glfw.Key)
+		for _, key := range pressedKeysThisFrame {
+			switch key {
+			case glfw.KeyC:
+				if ActiveCamera == FirstPerson {
+					ActiveCamera = ThirdPerson
+				} else {
+					ActiveCamera = FirstPerson
+				}
+			}
+		}
+	})
 	messagebus.RegisterType("mouse", ActiveCamera.handleMouse)
 
 	go updateConsoleOnTimer()
