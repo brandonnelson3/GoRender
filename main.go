@@ -18,7 +18,7 @@ const (
 	windowTitle  = "GoRender engine demo"
 	windowWidth  = 1920
 	windowHeight = 1080
-	windowFOV    = 90.0
+	windowFOV    = 45.0
 	windowNear   = .1
 	windowFar    = 1000
 )
@@ -54,7 +54,7 @@ func main() {
 
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
 	for x := 0; x < 10; x++ {
-		for z := 0; z < 2; z++ {
+		for z := 0; z < 10; z++ {
 			r := gfx.NewRenderable(gfx.CubeVertices)
 			r.Rotation = mgl32.Ident4()
 			r.Scale = mgl32.Ident4()
