@@ -14,6 +14,9 @@ type Renderable struct {
 
 	renderStyle uint32
 	vertCount   int32
+
+	// This renderable will choose not to draw if this is false.
+	enabled bool
 }
 
 // NewRenderable instantiates a Renderable for the given verticies.
@@ -36,6 +39,7 @@ func NewRenderable(verticies []Vertex) *Renderable {
 		Scale:       mgl32.Ident4(),
 		renderStyle: gl.TRIANGLES,
 		vertCount:   int32(len(verticies)),
+		enabled:     true,
 	}
 }
 
@@ -46,8 +50,10 @@ func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
 
 // Render bind's this renderable's VAO and draws.
 func (r *Renderable) Render() {
-	gl.BindVertexArray(r.vao)
-	gl.DrawArrays(r.renderStyle, 0, r.vertCount)
+	if r.enabled {
+		gl.BindVertexArray(r.vao)
+		gl.DrawArrays(r.renderStyle, 0, r.vertCount)
+	}
 }
 
 // PlaneVertices is the vertex list for a Plane.
