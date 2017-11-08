@@ -43,31 +43,33 @@ type camera struct {
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
-	// This is not yet a correct frustum, but shows the idea for the mean time.
 	verticies := []LineVertex{
-		{mgl32.Vec3{0, 0, 0}, redColor},
-		{mgl32.Vec3{1, 1, -1}, redColor},
+		{mgl32.Vec3{-1, 1, 0}, redColor},
+		{mgl32.Vec3{1, 1, 0}, redColor},
+		{mgl32.Vec3{1, 1, 0}, redColor},
+		{mgl32.Vec3{1, -1, 0}, redColor},
+		{mgl32.Vec3{1, -1, 0}, redColor},
+		{mgl32.Vec3{-1, -1, 0}, redColor},
+		{mgl32.Vec3{-1, -1, 0}, redColor},
+		{mgl32.Vec3{-1, 1, 0}, redColor},
 
-		{mgl32.Vec3{0, 0, 0}, redColor},
+		{mgl32.Vec3{-1, 1, 1}, redColor},
 		{mgl32.Vec3{1, 1, 1}, redColor},
-
-		{mgl32.Vec3{0, 0, 0}, redColor},
-		{mgl32.Vec3{1, -1, 1}, redColor},
-
-		{mgl32.Vec3{0, 0, 0}, redColor},
-		{mgl32.Vec3{1, -1, -1}, redColor},
-
-		{mgl32.Vec3{1, 1, -1}, redColor},
-		{mgl32.Vec3{1, 1, 1}, redColor},
-
 		{mgl32.Vec3{1, 1, 1}, redColor},
 		{mgl32.Vec3{1, -1, 1}, redColor},
-
 		{mgl32.Vec3{1, -1, 1}, redColor},
-		{mgl32.Vec3{1, -1, -1}, redColor},
+		{mgl32.Vec3{-1, -1, 1}, redColor},
+		{mgl32.Vec3{-1, -1, 1}, redColor},
+		{mgl32.Vec3{-1, 1, 1}, redColor},
 
-		{mgl32.Vec3{1, -1, -1}, redColor},
-		{mgl32.Vec3{1, 1, -1}, redColor},
+		{mgl32.Vec3{-1, 1, 0}, redColor},
+		{mgl32.Vec3{-1, 1, 1}, redColor},
+		{mgl32.Vec3{1, 1, 0}, redColor},
+		{mgl32.Vec3{1, 1, 1}, redColor},
+		{mgl32.Vec3{1, -1, 0}, redColor},
+		{mgl32.Vec3{1, -1, 1}, redColor},
+		{mgl32.Vec3{-1, -1, 0}, redColor},
+		{mgl32.Vec3{-1, -1, 1}, redColor},
 	}
 
 	var vao uint32
@@ -207,5 +209,5 @@ func (c *camera) RenderFrustum() {
 
 // GetFrustumModelMatrix returns the model matrix for the frustum of this camera.
 func (c *camera) GetFrustumModelMatrix() mgl32.Mat4 {
-	return mgl32.Translate3D(c.position.X(), c.position.Y(), c.position.Z()).Mul4(mgl32.HomogRotate3DY(c.horizontalAngle).Mul4(mgl32.HomogRotate3DZ(c.verticalAngle)))
+	return Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
 }
