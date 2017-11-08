@@ -51,8 +51,8 @@ func calculateFrameDetails() float64 {
 	}
 	mu.Unlock()
 	averageFrameTime := totalTime / numAveragedFrameLengths
-
-	return averageFrameTime
+	averageFramesPerSecond := 1 / averageFrameTime
+	return averageFramesPerSecond
 }
 
 // StartOfFrame is expected to be called at the same point in every frame to work properly.
