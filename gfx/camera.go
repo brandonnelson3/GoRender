@@ -29,6 +29,7 @@ var (
 	redColor   = mgl32.Vec3{1, 0, 0}
 	greenColor = mgl32.Vec3{0, 1, 0}
 	blueColor  = mgl32.Vec3{0, 0, 1}
+	whiteColor = mgl32.Vec3{1, 1, 1}
 )
 
 type camera struct {
@@ -44,32 +45,32 @@ type camera struct {
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
 	verticies := []LineVertex{
-		{mgl32.Vec3{-1, 1, 0}, redColor},
-		{mgl32.Vec3{1, 1, 0}, redColor},
-		{mgl32.Vec3{1, 1, 0}, redColor},
-		{mgl32.Vec3{1, -1, 0}, redColor},
-		{mgl32.Vec3{1, -1, 0}, redColor},
-		{mgl32.Vec3{-1, -1, 0}, redColor},
-		{mgl32.Vec3{-1, -1, 0}, redColor},
-		{mgl32.Vec3{-1, 1, 0}, redColor},
+		{mgl32.Vec3{-1, 1, 0}, whiteColor},
+		{mgl32.Vec3{1, 1, 0}, whiteColor},
+		{mgl32.Vec3{1, 1, 0}, whiteColor},
+		{mgl32.Vec3{1, -1, 0}, whiteColor},
+		{mgl32.Vec3{1, -1, 0}, whiteColor},
+		{mgl32.Vec3{-1, -1, 0}, whiteColor},
+		{mgl32.Vec3{-1, -1, 0}, whiteColor},
+		{mgl32.Vec3{-1, 1, 0}, whiteColor},
 
-		{mgl32.Vec3{-1, 1, 1}, redColor},
-		{mgl32.Vec3{1, 1, 1}, redColor},
-		{mgl32.Vec3{1, 1, 1}, redColor},
-		{mgl32.Vec3{1, -1, 1}, redColor},
-		{mgl32.Vec3{1, -1, 1}, redColor},
-		{mgl32.Vec3{-1, -1, 1}, redColor},
-		{mgl32.Vec3{-1, -1, 1}, redColor},
-		{mgl32.Vec3{-1, 1, 1}, redColor},
+		{mgl32.Vec3{-1, 1, 1}, whiteColor},
+		{mgl32.Vec3{1, 1, 1}, whiteColor},
+		{mgl32.Vec3{1, 1, 1}, whiteColor},
+		{mgl32.Vec3{1, -1, 1}, whiteColor},
+		{mgl32.Vec3{1, -1, 1}, whiteColor},
+		{mgl32.Vec3{-1, -1, 1}, whiteColor},
+		{mgl32.Vec3{-1, -1, 1}, whiteColor},
+		{mgl32.Vec3{-1, 1, 1}, whiteColor},
 
-		{mgl32.Vec3{-1, 1, 0}, redColor},
-		{mgl32.Vec3{-1, 1, 1}, redColor},
-		{mgl32.Vec3{1, 1, 0}, redColor},
-		{mgl32.Vec3{1, 1, 1}, redColor},
-		{mgl32.Vec3{1, -1, 0}, redColor},
-		{mgl32.Vec3{1, -1, 1}, redColor},
-		{mgl32.Vec3{-1, -1, 0}, redColor},
-		{mgl32.Vec3{-1, -1, 1}, redColor},
+		{mgl32.Vec3{-1, 1, 0}, whiteColor},
+		{mgl32.Vec3{-1, 1, 1}, whiteColor},
+		{mgl32.Vec3{1, 1, 0}, whiteColor},
+		{mgl32.Vec3{1, 1, 1}, whiteColor},
+		{mgl32.Vec3{1, -1, 0}, whiteColor},
+		{mgl32.Vec3{1, -1, 1}, whiteColor},
+		{mgl32.Vec3{-1, -1, 0}, whiteColor},
+		{mgl32.Vec3{-1, -1, 1}, whiteColor},
 	}
 
 	var vao uint32
