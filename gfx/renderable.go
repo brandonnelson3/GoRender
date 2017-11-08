@@ -9,17 +9,14 @@ import (
 type Renderable struct {
 	vao uint32
 
-	Position        mgl32.Vec3
-	Rotation, Scale mgl32.Mat4
+	Position        *mgl32.Vec3
+	Rotation, Scale *mgl32.Mat4
 
 	renderStyle uint32
 	vertCount   int32
-
-	// This renderable will choose not to draw if this is false.
-	enabled bool
 }
 
-// NewRenderable instantiates a Renderable for the given verticies.
+// NewRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
 func NewRenderable(verticies []Vertex) *Renderable {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
@@ -34,26 +31,23 @@ func NewRenderable(verticies []Vertex) *Renderable {
 
 	return &Renderable{
 		vao:         vao,
-		Position:    mgl32.Vec3{0, 0, 0},
-		Rotation:    mgl32.Ident4(),
-		Scale:       mgl32.Ident4(),
+		Position:    &mgl32.Vec3{0, 0, 0},
+		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
 		renderStyle: gl.TRIANGLES,
 		vertCount:   int32(len(verticies)),
-		enabled:     true,
 	}
 }
 
 // GetModelMatrix returns this renderable's final model transform matrix.
 func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
-	return r.Scale.Mul4(r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
+	return r.Scale.Mul4(*r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
 }
 
 // Render bind's this renderable's VAO and draws.
 func (r *Renderable) Render() {
-	if r.enabled {
-		gl.BindVertexArray(r.vao)
-		gl.DrawArrays(r.renderStyle, 0, r.vertCount)
-	}
+	gl.BindVertexArray(r.vao)
+	gl.DrawArrays(r.renderStyle, 0, r.vertCount)
 }
 
 // PlaneVertices is the vertex list for a Plane.

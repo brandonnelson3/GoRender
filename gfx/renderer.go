@@ -18,6 +18,10 @@ const TileSize = 16
 var Renderer r
 
 type r struct {
+	lineShaderPipeline uint32
+	lineVertexShader   *shaders.LineVertexShader
+	lineFragmentShader *shaders.LineFragmentShader
+
 	depthShaderPipeline uint32
 	depthVertexShader   *shaders.DepthVertexShader
 	depthFragmentShader *shaders.DepthFragmentShader
@@ -42,13 +46,28 @@ func InitRenderer() {
 	gl.DepthMask(true)
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 
+	lvs, err := shaders.NewLineVertexShader()
+	if err != nil {
+		log.Fatalf("Failed to compile LineVertexShader: %v", err)
+	}
+	lfs, err := shaders.NewLineFragmentShader()
+	if err != nil {
+		log.Fatalf("Failed to compile LineFragmentShader: %v", err)
+	}
+	var lsp uint32
+	gl.CreateProgramPipelines(1, &lsp)
+	lvs.AddToPipeline(lsp)
+	lfs.AddToPipeline(lsp)
+	gl.ValidateProgramPipeline(lsp)
+	lvs.BindVertexAttributes()
+
 	dvs, err := shaders.NewDepthVertexShader()
 	if err != nil {
 		log.Fatalf("Failed to compile DepthVertexShader: %v", err)
 	}
 	dfs, err := shaders.NewDepthFragmentShader()
 	if err != nil {
-		log.Fatalf("Failed to compile DepthVertexShader: %v", err)
+		log.Fatalf("Failed to compile DepthFragmentShader: %v", err)
 	}
 	var dsp uint32
 	gl.CreateProgramPipelines(1, &dsp)
@@ -115,6 +134,9 @@ func InitRenderer() {
 	}
 
 	Renderer = r{
+		lineShaderPipeline:  lsp,
+		lineVertexShader:    lvs,
+		lineFragmentShader:  lfs,
 		depthShaderPipeline: dsp,
 		depthVertexShader:   dvs,
 		depthFragmentShader: dfs,
@@ -183,5 +205,13 @@ func (renderer *r) Render(renderables []*Renderable) {
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
 		renderable.Render()
+	}
+
+	if ActiveCamera == ThirdPerson {
+		gl.BindProgramPipeline(renderer.lineShaderPipeline)
+		renderer.lineVertexShader.View.Set(ThirdPerson.GetView())
+		renderer.lineVertexShader.Projection.Set(Window.GetProjection())
+		renderer.lineVertexShader.Model.Set(FirstPerson.GetFrustumModelMatrix())
+		FirstPerson.RenderFrustum()
 	}
 }

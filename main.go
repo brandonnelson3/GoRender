@@ -56,9 +56,9 @@ func main() {
 	for x := 0; x < 10; x++ {
 		for z := 0; z < 10; z++ {
 			r := gfx.NewRenderable(gfx.CubeVertices)
-			r.Rotation = mgl32.Ident4()
-			r.Scale = mgl32.Ident4()
-			r.Position = mgl32.Vec3{float32(4 * x), 5.0, float32(4 * z)}
+			r.Rotation = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+			r.Scale = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
+			r.Position = &mgl32.Vec3{float32(4 * x), 5.0, float32(4 * z)}
 			renderables = append(renderables, r)
 		}
 	}
@@ -67,7 +67,8 @@ func main() {
 		StartOfFrame()
 
 		input.Update()
-		gfx.ActiveCamera.Update(GetPreviousFrameLength())
+		gfx.FirstPerson.Update(GetPreviousFrameLength())
+		gfx.ThirdPerson.Update(GetPreviousFrameLength())
 
 		gfx.Renderer.Render(renderables)
 

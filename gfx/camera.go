@@ -8,6 +8,7 @@ import (
 	"github.com/brandonnelson3/GoRender/input"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
+	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -24,23 +25,103 @@ var (
 	ThirdPerson *camera
 	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
 	ActiveCamera *camera
+
+	redColor   = mgl32.Vec3{1, 0, 0}
+	greenColor = mgl32.Vec3{0, 1, 0}
+	blueColor  = mgl32.Vec3{0, 0, 1}
 )
 
 type camera struct {
-	position        mgl32.Vec3
-	direction       mgl32.Vec3
-	horizontalAngle float32
-	verticalAngle   float32
-	sensitivity     float32
-	speed           float32
+	position          mgl32.Vec3
+	direction         mgl32.Vec3
+	horizontalAngle   float32
+	verticalAngle     float32
+	sensitivity       float32
+	speed             float32
+	frustumRenderable *Renderable
 }
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
-	FirstPerson = &camera{position: mgl32.Vec3{0, 9, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
-	ThirdPerson = &camera{position: mgl32.Vec3{0, 7, 0}, horizontalAngle: 0, verticalAngle: 0, sensitivity: 0.001, speed: 20}
+	// This is not yet a correct frustum, but shows the idea for the mean time.
+	verticies := []LineVertex{
+		{mgl32.Vec3{0, 0, 0}, redColor},
+		{mgl32.Vec3{1, 1, -1}, redColor},
+
+		{mgl32.Vec3{0, 0, 0}, redColor},
+		{mgl32.Vec3{1, 1, 1}, redColor},
+
+		{mgl32.Vec3{0, 0, 0}, redColor},
+		{mgl32.Vec3{1, -1, 1}, redColor},
+
+		{mgl32.Vec3{0, 0, 0}, redColor},
+		{mgl32.Vec3{1, -1, -1}, redColor},
+
+		{mgl32.Vec3{1, 1, -1}, redColor},
+		{mgl32.Vec3{1, 1, 1}, redColor},
+
+		{mgl32.Vec3{1, 1, 1}, redColor},
+		{mgl32.Vec3{1, -1, 1}, redColor},
+
+		{mgl32.Vec3{1, -1, 1}, redColor},
+		{mgl32.Vec3{1, -1, -1}, redColor},
+
+		{mgl32.Vec3{1, -1, -1}, redColor},
+		{mgl32.Vec3{1, 1, -1}, redColor},
+	}
+
+	var vao uint32
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
+
+	var vbo uint32
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*6*4, gl.Ptr(verticies), gl.STATIC_DRAW)
+
+	Renderer.lineVertexShader.BindVertexAttributes()
+
+	FirstPerson = &camera{
+		position:        mgl32.Vec3{0, 9, 0},
+		horizontalAngle: 0,
+		verticalAngle:   0,
+		sensitivity:     0.001,
+		speed:           20,
+	}
+	FirstPerson.frustumRenderable = &Renderable{
+		vao:         vao,
+		Position:    &FirstPerson.position,
+		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+		renderStyle: gl.LINES,
+		vertCount:   int32(len(verticies)),
+	}
+
+	ThirdPerson = &camera{
+		position:        mgl32.Vec3{-10, 10, -10},
+		horizontalAngle: -pi4,
+		verticalAngle:   -pi4,
+		sensitivity:     0.001,
+		speed:           20,
+	}
 	ActiveCamera = FirstPerson
-	messagebus.RegisterType("key", ActiveCamera.handleMovement)
+	messagebus.RegisterType("key", func(m *messagebus.Message) {
+		direction := mgl32.Vec3{0, 0, 0}
+		pressedKeys := m.Data1.([]glfw.Key)
+		for _, key := range pressedKeys {
+			switch key {
+			case glfw.KeyW:
+				direction = direction.Add(ActiveCamera.GetForward())
+			case glfw.KeyS:
+				direction = direction.Sub(ActiveCamera.GetForward())
+			case glfw.KeyD:
+				direction = direction.Add(ActiveCamera.GetRight())
+			case glfw.KeyA:
+				direction = direction.Sub(ActiveCamera.GetRight())
+			}
+		}
+		ActiveCamera.direction = direction
+	})
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
 		pressedKeysThisFrame := m.Data2.([]glfw.Key)
 		for _, key := range pressedKeysThisFrame {
@@ -54,7 +135,23 @@ func InitCameras() {
 			}
 		}
 	})
-	messagebus.RegisterType("mouse", ActiveCamera.handleMouse)
+	messagebus.RegisterType("mouse", func(m *messagebus.Message) {
+		mouseInput := m.Data1.(input.MouseInput)
+		ActiveCamera.verticalAngle -= ActiveCamera.sensitivity * float32(mouseInput.Y-float64(Window.Height)/2)
+		if ActiveCamera.verticalAngle < -pi2 {
+			ActiveCamera.verticalAngle = float32(-pi2 + 0.0001)
+		}
+		if ActiveCamera.verticalAngle > pi2 {
+			ActiveCamera.verticalAngle = float32(pi2 - 0.0001)
+		}
+		ActiveCamera.horizontalAngle -= ActiveCamera.sensitivity * float32(mouseInput.X-float64(Window.Width)/2)
+		for ActiveCamera.horizontalAngle < 0 {
+			ActiveCamera.horizontalAngle += float32(2 * math.Pi)
+		}
+		for ActiveCamera.horizontalAngle > float32(2*math.Pi) {
+			ActiveCamera.horizontalAngle -= float32(2 * math.Pi)
+		}
+	})
 
 	go updateConsoleOnTimer()
 }
@@ -103,38 +200,12 @@ func (c *camera) GetView() mgl32.Mat4 {
 	return mgl32.LookAtV(c.position, c.position.Add(c.GetForward()), mgl32.Vec3{0, 1, 0})
 }
 
-func (c *camera) handleMovement(m *messagebus.Message) {
-	direction := mgl32.Vec3{0, 0, 0}
-	pressedKeys := m.Data1.([]glfw.Key)
-	for _, key := range pressedKeys {
-		switch key {
-		case glfw.KeyW:
-			direction = direction.Add(c.GetForward())
-		case glfw.KeyS:
-			direction = direction.Sub(c.GetForward())
-		case glfw.KeyD:
-			direction = direction.Add(c.GetRight())
-		case glfw.KeyA:
-			direction = direction.Sub(c.GetRight())
-		}
-	}
-	c.direction = direction
+// RenderFrustum renders the frustum for this camera.
+func (c *camera) RenderFrustum() {
+	c.frustumRenderable.Render()
 }
 
-func (c *camera) handleMouse(m *messagebus.Message) {
-	mouseInput := m.Data1.(input.MouseInput)
-	c.verticalAngle -= c.sensitivity * float32(mouseInput.Y-float64(Window.Height)/2)
-	if c.verticalAngle < -pi2 {
-		c.verticalAngle = float32(-pi2 + 0.0001)
-	}
-	if c.verticalAngle > pi2 {
-		c.verticalAngle = float32(pi2 - 0.0001)
-	}
-	c.horizontalAngle -= c.sensitivity * float32(mouseInput.X-float64(Window.Width)/2)
-	for c.horizontalAngle < 0 {
-		c.horizontalAngle += float32(2 * math.Pi)
-	}
-	for c.horizontalAngle > float32(2*math.Pi) {
-		c.horizontalAngle -= float32(2 * math.Pi)
-	}
+// GetFrustumModelMatrix returns the model matrix for the frustum of this camera.
+func (c *camera) GetFrustumModelMatrix() mgl32.Mat4 {
+	return mgl32.Translate3D(c.position.X(), c.position.Y(), c.position.Z()).Mul4(mgl32.HomogRotate3DY(c.horizontalAngle).Mul4(mgl32.HomogRotate3DZ(c.verticalAngle)))
 }

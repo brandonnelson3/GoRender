@@ -38,14 +38,12 @@ func sendLogMessagesOnTimer() {
 			continue
 		}
 
-		_, averageFramesPerSecond := calculateFrameDetails()
-		//cameraAngleValue := fmt.Sprintf("[H: %.2f, V:%.2f]", ActiveCamera.horizontalAngle, ActiveCamera.verticalAngle)
+		averageFramesPerSecond := calculateFrameDetails()
 		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "timer_fps", Data2: fmt.Sprintf("%f", averageFramesPerSecond)})
-		//messagebus.SendSync(&messagebus.Message{System: "FrameRate", Type: "log", Data1: fmt.Sprintf("Length: %.3f ms - Avg FPS: %.1f - Limiting framerate to %d", averageFrameTime*1000, averageFramesPerSecond, framerateCap)})
 	}
 }
 
-func calculateFrameDetails() (float64, float64) {
+func calculateFrameDetails() float64 {
 	totalTime := float64(0)
 	mu.Lock()
 	for _, t := range times {
@@ -53,9 +51,8 @@ func calculateFrameDetails() (float64, float64) {
 	}
 	mu.Unlock()
 	averageFrameTime := totalTime / numAveragedFrameLengths
-	averageFramesPerSecond := 1 / averageFrameTime
 
-	return averageFrameTime, averageFramesPerSecond
+	return averageFrameTime
 }
 
 // StartOfFrame is expected to be called at the same point in every frame to work properly.
