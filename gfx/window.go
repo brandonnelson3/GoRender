@@ -1,8 +1,6 @@
 package gfx
 
 import (
-	"fmt"
-
 	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -65,14 +63,13 @@ func (window *w) GetProjection() mgl32.Mat4 {
 }
 
 func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, float32) {
-	fmt.Printf("Near: %f, Far: %f, NearPortion: %f, FarPortion: %f\n", near, far, nearPortion, farPortion)
 	delta := far - near
-	fmt.Printf("Result: Near: %f, Far: %f\n", near+delta*nearPortion, near+delta*farPortion)
 	return near + delta*nearPortion, near + delta*farPortion
 }
 
 // GetShadowPerspectiveProjection returns the i-th cascade's frustum specific perspective projection matrix.
 func (window *w) GetShadowPerspectiveProjection(i int) mgl32.Mat4 {
 	n, f := getPortionOfRange(window.nearPlane, window.farPlane, shadowSplits[i], shadowSplits[i+1])
+	c
 	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), n, f)
 }
