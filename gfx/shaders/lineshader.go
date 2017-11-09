@@ -16,7 +16,6 @@ const (
 
 uniform mat4 projection;
 uniform mat4 view;
-uniform mat4 model;
 
 in vec3 vert;
 in vec3 color;
@@ -28,7 +27,7 @@ out gl_PerVertex
 } vertex_out;
 
 void main() {
-	gl_Position = projection * view * model * vec4(vert, 1);
+	gl_Position = projection * view * vec4(vert, 1);
 	vertex_out.color = color;
 }` + "\x00"
 	lineShaderOriginalFragmentSourceFile = `lineshader.frag`
@@ -53,7 +52,7 @@ void main() {
 type LineVertexShader struct {
 	uint32
 
-	Projection, View, Model *uniforms.Matrix4
+	Projection, View *uniforms.Matrix4
 }
 
 // NewLineVertexShader instantiates and initializes a shader object.
@@ -95,7 +94,6 @@ func NewLineVertexShader() (*LineVertexShader, error) {
 
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
-	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
 
 	gl.DeleteShader(shader)
 
@@ -103,7 +101,6 @@ func NewLineVertexShader() (*LineVertexShader, error) {
 		uint32:     program,
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
-		Model:      uniforms.NewMatrix4(program, modelLoc),
 	}, nil
 }
 

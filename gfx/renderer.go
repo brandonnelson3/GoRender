@@ -211,7 +211,6 @@ func (renderer *r) Render(renderables []*Renderable) {
 		gl.BindProgramPipeline(renderer.lineShaderPipeline)
 		renderer.lineVertexShader.View.Set(ThirdPerson.GetView())
 		renderer.lineVertexShader.Projection.Set(Window.GetProjection())
-		renderer.lineVertexShader.Model.Set(FirstPerson.GetFrustumModelMatrix())
 		FirstPerson.RenderFrustum()
 	}
 }

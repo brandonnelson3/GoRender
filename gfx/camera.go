@@ -44,35 +44,6 @@ type camera struct {
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
 func InitCameras() {
-	verticies := []LineVertex{
-		{mgl32.Vec3{-1, 1, 0}, whiteColor},
-		{mgl32.Vec3{1, 1, 0}, whiteColor},
-		{mgl32.Vec3{1, 1, 0}, whiteColor},
-		{mgl32.Vec3{1, -1, 0}, whiteColor},
-		{mgl32.Vec3{1, -1, 0}, whiteColor},
-		{mgl32.Vec3{-1, -1, 0}, whiteColor},
-		{mgl32.Vec3{-1, -1, 0}, whiteColor},
-		{mgl32.Vec3{-1, 1, 0}, whiteColor},
-
-		{mgl32.Vec3{-1, 1, 1}, whiteColor},
-		{mgl32.Vec3{1, 1, 1}, whiteColor},
-		{mgl32.Vec3{1, 1, 1}, whiteColor},
-		{mgl32.Vec3{1, -1, 1}, whiteColor},
-		{mgl32.Vec3{1, -1, 1}, whiteColor},
-		{mgl32.Vec3{-1, -1, 1}, whiteColor},
-		{mgl32.Vec3{-1, -1, 1}, whiteColor},
-		{mgl32.Vec3{-1, 1, 1}, whiteColor},
-
-		{mgl32.Vec3{-1, 1, 0}, whiteColor},
-		{mgl32.Vec3{-1, 1, 1}, whiteColor},
-		{mgl32.Vec3{1, 1, 0}, whiteColor},
-		{mgl32.Vec3{1, 1, 1}, whiteColor},
-		{mgl32.Vec3{1, -1, 0}, whiteColor},
-		{mgl32.Vec3{1, -1, 1}, whiteColor},
-		{mgl32.Vec3{-1, -1, 0}, whiteColor},
-		{mgl32.Vec3{-1, -1, 1}, whiteColor},
-	}
-
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
@@ -80,7 +51,6 @@ func InitCameras() {
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*6*4, gl.Ptr(verticies), gl.STATIC_DRAW)
 
 	Renderer.lineVertexShader.BindVertexAttributes()
 
@@ -93,11 +63,12 @@ func InitCameras() {
 	}
 	FirstPerson.frustumRenderable = &Renderable{
 		vao:         vao,
+		vbo:         vbo,
 		Position:    &FirstPerson.position,
 		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
 		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
 		renderStyle: gl.LINES,
-		vertCount:   int32(len(verticies)),
+		vertCount:   24,
 	}
 
 	ThirdPerson = &camera{
@@ -181,6 +152,46 @@ func (c *camera) Update(d float64) {
 		c.position = c.position.Add(delta)
 		c.direction = mgl32.Vec3{0, 0, 0}
 	}
+	if c == FirstPerson {
+		verticies := []LineVertex{
+			{mgl32.Vec3{-1, 1, 0}, whiteColor},
+			{mgl32.Vec3{1, 1, 0}, whiteColor},
+			{mgl32.Vec3{1, 1, 0}, whiteColor},
+			{mgl32.Vec3{1, -1, 0}, whiteColor},
+			{mgl32.Vec3{1, -1, 0}, whiteColor},
+			{mgl32.Vec3{-1, -1, 0}, whiteColor},
+			{mgl32.Vec3{-1, -1, 0}, whiteColor},
+			{mgl32.Vec3{-1, 1, 0}, whiteColor},
+
+			{mgl32.Vec3{-1, 1, 1}, whiteColor},
+			{mgl32.Vec3{1, 1, 1}, whiteColor},
+			{mgl32.Vec3{1, 1, 1}, whiteColor},
+			{mgl32.Vec3{1, -1, 1}, whiteColor},
+			{mgl32.Vec3{1, -1, 1}, whiteColor},
+			{mgl32.Vec3{-1, -1, 1}, whiteColor},
+			{mgl32.Vec3{-1, -1, 1}, whiteColor},
+			{mgl32.Vec3{-1, 1, 1}, whiteColor},
+
+			{mgl32.Vec3{-1, 1, 0}, whiteColor},
+			{mgl32.Vec3{-1, 1, 1}, whiteColor},
+			{mgl32.Vec3{1, 1, 0}, whiteColor},
+			{mgl32.Vec3{1, 1, 1}, whiteColor},
+			{mgl32.Vec3{1, -1, 0}, whiteColor},
+			{mgl32.Vec3{1, -1, 1}, whiteColor},
+			{mgl32.Vec3{-1, -1, 0}, whiteColor},
+			{mgl32.Vec3{-1, -1, 1}, whiteColor},
+		}
+
+		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
+		for i, v := range verticies {
+			vert := transform.Mul4x1(v.Vert.Vec4(1))
+			verticies[i].Vert = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
+		}
+
+		gl.BindVertexArray(c.frustumRenderable.vao)
+		gl.BindBuffer(gl.ARRAY_BUFFER, c.frustumRenderable.vbo)
+		gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*6*4, gl.Ptr(verticies), gl.DYNAMIC_DRAW)
+	}
 }
 
 // GetPosition returns the position of this camera.
@@ -206,9 +217,4 @@ func (c *camera) GetView() mgl32.Mat4 {
 // RenderFrustum renders the frustum for this camera.
 func (c *camera) RenderFrustum() {
 	c.frustumRenderable.Render()
-}
-
-// GetFrustumModelMatrix returns the model matrix for the frustum of this camera.
-func (c *camera) GetFrustumModelMatrix() mgl32.Mat4 {
-	return Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
 }

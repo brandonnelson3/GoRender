@@ -7,7 +7,7 @@ import (
 
 // Renderable is a object wrapping around something that is renderable. This struct contains all of the settings and elements needed to render something.
 type Renderable struct {
-	vao uint32
+	vao, vbo uint32
 
 	Position        *mgl32.Vec3
 	Rotation, Scale *mgl32.Mat4
@@ -31,6 +31,7 @@ func NewRenderable(verticies []Vertex) *Renderable {
 
 	return &Renderable{
 		vao:         vao,
+		vbo:         vbo,
 		Position:    &mgl32.Vec3{0, 0, 0},
 		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
 		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
