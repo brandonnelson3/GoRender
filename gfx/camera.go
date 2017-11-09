@@ -26,20 +26,25 @@ var (
 	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
 	ActiveCamera *camera
 
-	redColor   = mgl32.Vec3{1, 0, 0}
-	greenColor = mgl32.Vec3{0, 1, 0}
-	blueColor  = mgl32.Vec3{0, 0, 1}
+	redColor    = mgl32.Vec3{1, 0, 0}
+	greenColor  = mgl32.Vec3{0, 1, 0}
+	blueColor   = mgl32.Vec3{0, 0, 1}
+	yellowColor = mgl32.Vec3{1, 1, 0}
+
+	cascadeColors = []mgl32.Vec3{redColor, blueColor, greenColor}
+
 	whiteColor = mgl32.Vec3{1, 1, 1}
 )
 
 type camera struct {
-	position          mgl32.Vec3
-	direction         mgl32.Vec3
-	horizontalAngle   float32
-	verticalAngle     float32
-	sensitivity       float32
-	speed             float32
-	frustumRenderable *Renderable
+	position           mgl32.Vec3
+	direction          mgl32.Vec3
+	horizontalAngle    float32
+	verticalAngle      float32
+	sensitivity        float32
+	speed              float32
+	frustumRenderable  *Renderable
+	cascadeRenderables []*Renderable
 }
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
@@ -64,9 +69,6 @@ func InitCameras() {
 	FirstPerson.frustumRenderable = &Renderable{
 		vao:         vao,
 		vbo:         vbo,
-		Position:    &FirstPerson.position,
-		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
-		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
 		renderStyle: gl.LINES,
 		vertCount:   24,
 	}
@@ -153,40 +155,54 @@ func (c *camera) Update(d float64) {
 		c.direction = mgl32.Vec3{0, 0, 0}
 	}
 	if c == FirstPerson {
-		verticies := []LineVertex{
-			{mgl32.Vec3{-1, 1, 0}, whiteColor},
-			{mgl32.Vec3{1, 1, 0}, whiteColor},
-			{mgl32.Vec3{1, 1, 0}, whiteColor},
-			{mgl32.Vec3{1, -1, 0}, whiteColor},
-			{mgl32.Vec3{1, -1, 0}, whiteColor},
-			{mgl32.Vec3{-1, -1, 0}, whiteColor},
-			{mgl32.Vec3{-1, -1, 0}, whiteColor},
-			{mgl32.Vec3{-1, 1, 0}, whiteColor},
+		cornerVerticies := []mgl32.Vec3{
+			// Front
+			mgl32.Vec3{-1, 1, 0},
+			mgl32.Vec3{1, 1, 0},
+			mgl32.Vec3{1, 1, 0},
+			mgl32.Vec3{1, -1, 0},
+			mgl32.Vec3{1, -1, 0},
+			mgl32.Vec3{-1, -1, 0},
+			mgl32.Vec3{-1, -1, 0},
+			mgl32.Vec3{-1, 1, 0},
 
-			{mgl32.Vec3{-1, 1, 1}, whiteColor},
-			{mgl32.Vec3{1, 1, 1}, whiteColor},
-			{mgl32.Vec3{1, 1, 1}, whiteColor},
-			{mgl32.Vec3{1, -1, 1}, whiteColor},
-			{mgl32.Vec3{1, -1, 1}, whiteColor},
-			{mgl32.Vec3{-1, -1, 1}, whiteColor},
-			{mgl32.Vec3{-1, -1, 1}, whiteColor},
-			{mgl32.Vec3{-1, 1, 1}, whiteColor},
+			// Back
+			mgl32.Vec3{-1, 1, 1},
+			mgl32.Vec3{1, 1, 1},
+			mgl32.Vec3{1, 1, 1},
+			mgl32.Vec3{1, -1, 1},
+			mgl32.Vec3{1, -1, 1},
+			mgl32.Vec3{-1, -1, 1},
+			mgl32.Vec3{-1, -1, 1},
+			mgl32.Vec3{-1, 1, 1},
 
-			{mgl32.Vec3{-1, 1, 0}, whiteColor},
-			{mgl32.Vec3{-1, 1, 1}, whiteColor},
-			{mgl32.Vec3{1, 1, 0}, whiteColor},
-			{mgl32.Vec3{1, 1, 1}, whiteColor},
-			{mgl32.Vec3{1, -1, 0}, whiteColor},
-			{mgl32.Vec3{1, -1, 1}, whiteColor},
-			{mgl32.Vec3{-1, -1, 0}, whiteColor},
-			{mgl32.Vec3{-1, -1, 1}, whiteColor},
+			// Sides
+			mgl32.Vec3{-1, 1, 0},
+			mgl32.Vec3{-1, 1, 1},
+			mgl32.Vec3{1, 1, 0},
+			mgl32.Vec3{1, 1, 1},
+			mgl32.Vec3{1, -1, 0},
+			mgl32.Vec3{1, -1, 1},
+			mgl32.Vec3{-1, -1, 0},
+			mgl32.Vec3{-1, -1, 1},
+		}
+
+		verticies := []LineVertex{}
+
+		for j := 0; j < 3; j++ {
+			transform := Window.GetShadowPerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv().Transpose()
+			for _, v := range cornerVerticies {
+				vert := transform.Mul4x1(v.Vec4(1))
+				verticies = append(verticies, LineVertex{mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}, cascadeColors[j]})
+			}
 		}
 
 		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
-		for i, v := range verticies {
-			vert := transform.Mul4x1(v.Vert.Vec4(1))
-			verticies[i].Vert = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
+		for _, v := range cornerVerticies {
+			vert := transform.Mul4x1(v.Vec4(1))
+			verticies = append(verticies, LineVertex{mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}, whiteColor})
 		}
+		c.frustumRenderable.vertCount = int32(len(verticies))
 
 		gl.BindVertexArray(c.frustumRenderable.vao)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.frustumRenderable.vbo)
@@ -216,5 +232,6 @@ func (c *camera) GetView() mgl32.Mat4 {
 
 // RenderFrustum renders the frustum for this camera.
 func (c *camera) RenderFrustum() {
-	c.frustumRenderable.Render()
+	gl.BindVertexArray(c.frustumRenderable.vao)
+	gl.DrawArrays(c.frustumRenderable.renderStyle, 0, c.frustumRenderable.vertCount-24)
 }
