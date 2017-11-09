@@ -190,7 +190,7 @@ func (c *camera) Update(d float64) {
 		verticies := []LineVertex{}
 
 		for j := 0; j < 3; j++ {
-			transform := Window.GetShadowPerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv().Transpose()
+			transform := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv().Transpose()
 			for _, v := range cornerVerticies {
 				vert := transform.Mul4x1(v.Vec4(1))
 				verticies = append(verticies, LineVertex{mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}, cascadeColors[j]})

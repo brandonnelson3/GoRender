@@ -67,9 +67,8 @@ func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, flo
 	return near + delta*nearPortion, near + delta*farPortion
 }
 
-// GetShadowPerspectiveProjection returns the i-th cascade's frustum specific perspective projection matrix.
-func (window *w) GetShadowPerspectiveProjection(i int) mgl32.Mat4 {
+// GetShadowCascadePerspectiveProjection returns the i-th cascade's frustum specific perspective projection matrix.
+func (window *w) GetShadowCascadePerspectiveProjection(i int) mgl32.Mat4 {
 	n, f := getPortionOfRange(window.nearPlane, window.farPlane, shadowSplits[i], shadowSplits[i+1])
-	c
 	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), n, f)
 }
