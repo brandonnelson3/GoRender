@@ -71,9 +71,9 @@ func InitCameras() {
 		speed:           20,
 		vao:             vao,
 		vbo:             vbo,
-		renderCascade1:  true,
-		renderCascade2:  true,
-		renderCascade3:  true,
+		renderCascade1:  false,
+		renderCascade2:  false,
+		renderCascade3:  false,
 		renderFrustum:   false,
 	}
 
@@ -112,6 +112,14 @@ func InitCameras() {
 				} else {
 					ActiveCamera = FirstPerson
 				}
+			case glfw.KeyKP0:
+				FirstPerson.renderFrustum = !FirstPerson.renderFrustum
+			case glfw.KeyKP1:
+				FirstPerson.renderCascade1 = !FirstPerson.renderCascade1
+			case glfw.KeyKP2:
+				FirstPerson.renderCascade2 = !FirstPerson.renderCascade2
+			case glfw.KeyKP3:
+				FirstPerson.renderCascade3 = !FirstPerson.renderCascade3
 			}
 		}
 	})
@@ -242,12 +250,12 @@ func (c *camera) RenderFrustum() {
 		gl.DrawArrays(gl.LINES, 0, 24)
 	}
 	if c.renderCascade2 {
-		gl.DrawArrays(gl.LINES, 24, 48)
+		gl.DrawArrays(gl.LINES, 24, 24)
 	}
 	if c.renderCascade3 {
-		gl.DrawArrays(gl.LINES, 48, 72)
+		gl.DrawArrays(gl.LINES, 48, 24)
 	}
 	if c.renderFrustum {
-		gl.DrawArrays(gl.LINES, 72, 96)
+		gl.DrawArrays(gl.LINES, 72, 24)
 	}
 }
