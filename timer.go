@@ -12,7 +12,7 @@ import (
 
 const (
 	numAveragedFrameLengths = 100
-	framerateCap            = 105
+	framerateCap            = 200
 )
 
 var (

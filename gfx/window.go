@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/brandonnelson3/GoRender/mathutils"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -14,7 +15,7 @@ var (
 	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
-	shadowSplits = []float32{0, .01, .25, 1}
+	shadowSplits = []float32{0.1, 50, 200, 600}
 )
 
 // Window is GoRender's primary Window representation. This class is a wrapper around an opengl glfw window, and GoRender specific functionality.
@@ -69,6 +70,5 @@ func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, flo
 
 // GetShadowCascadePerspectiveProjection returns the i-th cascade's frustum specific perspective projection matrix.
 func (window *w) GetShadowCascadePerspectiveProjection(i int) mgl32.Mat4 {
-	n, f := getPortionOfRange(window.nearPlane, window.farPlane, shadowSplits[i], shadowSplits[i+1])
-	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), n, f)
+	return mathutils.PerspectiveZO(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), shadowSplits[i], shadowSplits[i+1])
 }

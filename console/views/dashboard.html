@@ -19,7 +19,7 @@
       }
 
       /* Stack toolbar and content on top of each other. */
-      .demo-body {
+      .body {
         display: flex;
         flex-direction: column;
         padding: 0;
@@ -30,20 +30,22 @@
       }
 
       /* Place drawer and main next to each other. */
-      .demo-content {
+      .content {
         display: flex;
         flex: 1 1 auto;
         height: 100%;
         box-sizing: border-box;
       }
 
-      .demo-main {
+      .main {
         padding-left: 16px;
       }
 
-      .demo-card {
+      .card {
         width: 320px;
         background-color: white;
+        margin-right: 12px;
+        margin-bottom: 12px;
       }
 
       .mdc-permanent-drawer {
@@ -59,10 +61,12 @@
 
       .extra-content-wrapper {
         padding: 10px;
+        display: flex;
+        flex-flow: row wrap;
       }
     </style>
   </head>
-  <body class="mdc-typography demo-body">
+  <body class="mdc-typography body">
     <header class="mdc-toolbar mdc-toolbar--fixed">
       <div class="mdc-toolbar__row">
         <section class="mdc-toolbar__section mdc-toolbar__section--align-start">
@@ -74,7 +78,7 @@
       </div>
     </header>
 
-    <div class="demo-content mdc-toolbar-fixed-adjust">
+    <div class="content mdc-toolbar-fixed-adjust">
       <nav class="mdc-permanent-drawer">
         <div class="mdc-list-group">
           <nav class="mdc-list">
@@ -84,14 +88,14 @@
           </nav>
         </div>
       </nav>
-      <main class="demo-main">
+      <main class="main">
         <h1 class="mdc-typography--display1">Dashboard</h1>
         <p class="mdc-typography--body1">GoRender Statistics Dashboard</p>
         <div>
-          <canvas id="fps_counter" width="800" height="300"></canvas>
+          <canvas id="fps_counter" width="800" height="150"></canvas>
         </div>
         <div class="extra-content-wrapper">
-          <div class="mdc-card demo-card">
+          <div class="mdc-card card">
             <section class="mdc-card__primary">
               <h1 class="mdc-card__title mdc-card__title--large">Camera Stats</h1>
             </section>
@@ -99,6 +103,33 @@
               Position: <span class="camera_position"></span><br>
               Forward: <span class="camera_forward"></span><br>
               Angle: <span class="camera_angle"></span><br>
+            </section>
+          </div>
+          <div class="mdc-card card">
+            <section class="mdc-card__primary">
+              <h1 class="mdc-card__title mdc-card__title--large">Shadow Data</h1>
+              <h2 class="mdc-card__subtitle">Cascade 1 points</h2>
+            </section>
+            <section class="mdc-card__supporting-text">
+              <span class="cascade_1"></span>
+            </section>
+          </div>
+          <div class="mdc-card card">
+            <section class="mdc-card__primary">
+              <h1 class="mdc-card__title mdc-card__title--large">Shadow Data</h1>
+              <h2 class="mdc-card__subtitle">Cascade 2 points</h2>
+            </section>
+            <section class="mdc-card__supporting-text">
+              <span class="cascade_2"></span>
+            </section>
+          </div>
+          <div class="mdc-card card">
+            <section class="mdc-card__primary">
+              <h1 class="mdc-card__title mdc-card__title--large">Shadow Data</h1>
+              <h2 class="mdc-card__subtitle">Cascade 3 points</h2>
+            </section>
+            <section class="mdc-card__supporting-text">
+              <span class="cascade_3"></span>
             </section>
           </div>
         </div>

@@ -9,6 +9,9 @@ document.addEventListener("DOMContentLoaded", function() {
     var cameraForwardElement = document.getElementsByClassName('camera_forward')[0];
     var cameraAngleElement = document.getElementsByClassName('camera_angle')[0];
     var connectionStatusElement = document.getElementsByClassName('connection_status_img')[0];
+    var cascade1Element = document.getElementsByClassName('cascade_1')[0];
+    var cascade2Element = document.getElementsByClassName('cascade_2')[0];
+    var cascade3Element = document.getElementsByClassName('cascade_3')[0];
 
     var chart = new SmoothieChart({
         millisPerPixel:72,
@@ -54,6 +57,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (data.type == "timer_fps") {
                 line.append(new Date().getTime(), data.value);
+            }
+
+            if (data.type == "cascade_1") {
+                cascade1Element.innerHTML = data.value;
+            }
+
+            if (data.type == "cascade_2") {
+                cascade2Element.innerHTML = data.value;
+            }
+            
+            if (data.type == "cascade_3") {
+                cascade3Element.innerHTML = data.value;
             }
         };
         ws.onclose = function(){

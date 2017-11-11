@@ -60,7 +60,7 @@ func InitCameras() {
 	Renderer.lineVertexShader.BindVertexAttributes()
 
 	FirstPerson = &camera{
-		position:        mgl32.Vec3{0, 9, 0},
+		position:        mgl32.Vec3{0, 0, 0},
 		horizontalAngle: 0,
 		verticalAngle:   0,
 		sensitivity:     0.001,
@@ -155,58 +155,61 @@ func (c *camera) Update(d float64) {
 		c.direction = mgl32.Vec3{0, 0, 0}
 	}
 	if c == FirstPerson {
-		cornerVerticies := []mgl32.Vec3{
-			// Front
+		cornerVertices := []mgl32.Vec3{
 			mgl32.Vec3{-1, 1, 0},
 			mgl32.Vec3{1, 1, 0},
-			mgl32.Vec3{1, 1, 0},
-			mgl32.Vec3{1, -1, 0},
 			mgl32.Vec3{1, -1, 0},
 			mgl32.Vec3{-1, -1, 0},
-			mgl32.Vec3{-1, -1, 0},
-			mgl32.Vec3{-1, 1, 0},
-
-			// Back
 			mgl32.Vec3{-1, 1, 1},
 			mgl32.Vec3{1, 1, 1},
-			mgl32.Vec3{1, 1, 1},
 			mgl32.Vec3{1, -1, 1},
-			mgl32.Vec3{1, -1, 1},
-			mgl32.Vec3{-1, -1, 1},
-			mgl32.Vec3{-1, -1, 1},
-			mgl32.Vec3{-1, 1, 1},
-
-			// Sides
-			mgl32.Vec3{-1, 1, 0},
-			mgl32.Vec3{-1, 1, 1},
-			mgl32.Vec3{1, 1, 0},
-			mgl32.Vec3{1, 1, 1},
-			mgl32.Vec3{1, -1, 0},
-			mgl32.Vec3{1, -1, 1},
-			mgl32.Vec3{-1, -1, 0},
 			mgl32.Vec3{-1, -1, 1},
 		}
 
-		verticies := []LineVertex{}
+		lineIndices := []int{
+			// Near
+			0, 1, 1, 2, 2, 3, 3, 0,
+			// Far
+			4, 5, 5, 6, 6, 7, 7, 4,
+			// Sides
+			0, 4, 1, 5, 2, 6, 3, 7,
+		}
 
+		vertices := []LineVertex{}
 		for j := 0; j < 3; j++ {
 			transform := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv().Transpose()
-			for _, v := range cornerVerticies {
+
+			// TODO(brnelson): Remove this for performance reasons, at bare minimum it doesnt need done every single frame.
+			str := ""
+			cascadeCornerVertices := [8]mgl32.Vec3{}
+			for i, v := range cornerVertices {
 				vert := transform.Mul4x1(v.Vec4(1))
-				verticies = append(verticies, LineVertex{mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}, cascadeColors[j]})
+				cascadeCornerVertices[i] = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
+				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", vert[0]/vert[3], vert[1]/vert[3], vert[2]/vert[3])
+			}
+			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_%d", j+1), Data2: str})
+
+			// Note this is using the second "value" of the lineIndices index.
+			for _, i := range lineIndices {
+				vertices = append(vertices, LineVertex{cascadeCornerVertices[i], cascadeColors[j]})
 			}
 		}
 
 		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
-		for _, v := range cornerVerticies {
+		cascadeCornerVertices := [8]mgl32.Vec3{}
+		for i, v := range cornerVertices {
 			vert := transform.Mul4x1(v.Vec4(1))
-			verticies = append(verticies, LineVertex{mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}, whiteColor})
+			cascadeCornerVertices[i] = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
 		}
-		c.frustumRenderable.vertCount = int32(len(verticies))
+		// Note this is using the second "value" of the lineIndices index.
+		for _, i := range lineIndices {
+			vertices = append(vertices, LineVertex{cascadeCornerVertices[i], whiteColor})
+		}
+		c.frustumRenderable.vertCount = int32(len(vertices))
 
 		gl.BindVertexArray(c.frustumRenderable.vao)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.frustumRenderable.vbo)
-		gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*6*4, gl.Ptr(verticies), gl.DYNAMIC_DRAW)
+		gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*6*4, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
 	}
 }
 
