@@ -26,10 +26,9 @@ var (
 	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
 	ActiveCamera *camera
 
-	redColor    = mgl32.Vec3{1, 0, 0}
-	greenColor  = mgl32.Vec3{0, 1, 0}
-	blueColor   = mgl32.Vec3{0, 0, 1}
-	yellowColor = mgl32.Vec3{1, 1, 0}
+	redColor   = mgl32.Vec3{1, 0, 0}
+	greenColor = mgl32.Vec3{0, 1, 0}
+	blueColor  = mgl32.Vec3{0, 0, 1}
 
 	cascadeColors = []mgl32.Vec3{redColor, blueColor, greenColor}
 
@@ -37,14 +36,19 @@ var (
 )
 
 type camera struct {
-	position           mgl32.Vec3
-	direction          mgl32.Vec3
-	horizontalAngle    float32
-	verticalAngle      float32
-	sensitivity        float32
-	speed              float32
-	frustumRenderable  *Renderable
-	cascadeRenderables []*Renderable
+	position        mgl32.Vec3
+	direction       mgl32.Vec3
+	horizontalAngle float32
+	verticalAngle   float32
+	sensitivity     float32
+	speed           float32
+
+	// Frustum rendering done internally without Renderable.
+	vao, vbo       uint32
+	renderFrustum  bool
+	renderCascade1 bool
+	renderCascade2 bool
+	renderCascade3 bool
 }
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
@@ -60,17 +64,17 @@ func InitCameras() {
 	Renderer.lineVertexShader.BindVertexAttributes()
 
 	FirstPerson = &camera{
-		position:        mgl32.Vec3{0, 0, 0},
+		position:        mgl32.Vec3{0, 9, 0},
 		horizontalAngle: 0,
 		verticalAngle:   0,
 		sensitivity:     0.001,
 		speed:           20,
-	}
-	FirstPerson.frustumRenderable = &Renderable{
-		vao:         vao,
-		vbo:         vbo,
-		renderStyle: gl.LINES,
-		vertCount:   24,
+		vao:             vao,
+		vbo:             vbo,
+		renderCascade1:  true,
+		renderCascade2:  true,
+		renderCascade3:  true,
+		renderFrustum:   false,
 	}
 
 	ThirdPerson = &camera{
@@ -183,9 +187,9 @@ func (c *camera) Update(d float64) {
 			str := ""
 			cascadeCornerVertices := [8]mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				vert := transform.Mul4x1(v.Vec4(1))
-				cascadeCornerVertices[i] = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
-				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", vert[0]/vert[3], vert[1]/vert[3], vert[2]/vert[3])
+				temp := transform.Mul4x1(v.Vec4(1))
+				cascadeCornerVertices[i] = mgl32.Vec3{temp.X() / temp.W(), temp.Y() / temp.W(), temp.Z() / temp.W()}
+				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", cascadeCornerVertices[i].X(), cascadeCornerVertices[i].Y(), cascadeCornerVertices[i].Z())
 			}
 			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_%d", j+1), Data2: str})
 
@@ -198,17 +202,15 @@ func (c *camera) Update(d float64) {
 		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
 		cascadeCornerVertices := [8]mgl32.Vec3{}
 		for i, v := range cornerVertices {
-			vert := transform.Mul4x1(v.Vec4(1))
-			cascadeCornerVertices[i] = mgl32.Vec3{vert[0] / vert[3], vert[1] / vert[3], vert[2] / vert[3]}
+			temp := transform.Mul4x1(v.Vec4(1))
+			cascadeCornerVertices[i] = mgl32.Vec3{temp.X() / temp.W(), temp.Y() / temp.W(), temp.Z() / temp.W()}
 		}
 		// Note this is using the second "value" of the lineIndices index.
 		for _, i := range lineIndices {
 			vertices = append(vertices, LineVertex{cascadeCornerVertices[i], whiteColor})
 		}
-		c.frustumRenderable.vertCount = int32(len(vertices))
-
-		gl.BindVertexArray(c.frustumRenderable.vao)
-		gl.BindBuffer(gl.ARRAY_BUFFER, c.frustumRenderable.vbo)
+		gl.BindVertexArray(c.vao)
+		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*6*4, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
 	}
 }
@@ -235,6 +237,17 @@ func (c *camera) GetView() mgl32.Mat4 {
 
 // RenderFrustum renders the frustum for this camera.
 func (c *camera) RenderFrustum() {
-	gl.BindVertexArray(c.frustumRenderable.vao)
-	gl.DrawArrays(c.frustumRenderable.renderStyle, 0, c.frustumRenderable.vertCount-24)
+	gl.BindVertexArray(c.vao)
+	if c.renderCascade1 {
+		gl.DrawArrays(gl.LINES, 0, 24)
+	}
+	if c.renderCascade2 {
+		gl.DrawArrays(gl.LINES, 24, 48)
+	}
+	if c.renderCascade3 {
+		gl.DrawArrays(gl.LINES, 48, 72)
+	}
+	if c.renderFrustum {
+		gl.DrawArrays(gl.LINES, 72, 96)
+	}
 }

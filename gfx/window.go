@@ -60,7 +60,7 @@ func (window *w) RecenterCursor() {
 
 // GetProjection returns the projection matrix.
 func (window *w) GetProjection() mgl32.Mat4 {
-	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), window.nearPlane, window.farPlane)
+	return mathutils.PerspectiveZO(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), window.nearPlane, window.farPlane)
 }
 
 func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, float32) {
