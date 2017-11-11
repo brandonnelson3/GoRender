@@ -44,11 +44,12 @@ type camera struct {
 	speed           float32
 
 	// Frustum rendering done internally without Renderable.
-	vao, vbo       uint32
-	renderFrustum  bool
-	renderCascade1 bool
-	renderCascade2 bool
-	renderCascade3 bool
+	vao, vbo             uint32
+	renderFrustum        bool
+	renderCascade1       bool
+	renderCascade2       bool
+	renderCascade3       bool
+	renderCascadeCenters bool
 }
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
@@ -64,17 +65,18 @@ func InitCameras() {
 	Renderer.lineVertexShader.BindVertexAttributes()
 
 	FirstPerson = &camera{
-		position:        mgl32.Vec3{0, 9, 0},
-		horizontalAngle: 0,
-		verticalAngle:   0,
-		sensitivity:     0.001,
-		speed:           20,
-		vao:             vao,
-		vbo:             vbo,
-		renderCascade1:  false,
-		renderCascade2:  false,
-		renderCascade3:  false,
-		renderFrustum:   false,
+		position:             mgl32.Vec3{0, 9, 0},
+		horizontalAngle:      0,
+		verticalAngle:        0,
+		sensitivity:          0.001,
+		speed:                20,
+		vao:                  vao,
+		vbo:                  vbo,
+		renderCascade1:       true,
+		renderCascadeCenters: true,
+		renderCascade2:       false,
+		renderCascade3:       false,
+		renderFrustum:        false,
 	}
 
 	ThirdPerson = &camera{
@@ -120,6 +122,8 @@ func InitCameras() {
 				FirstPerson.renderCascade2 = !FirstPerson.renderCascade2
 			case glfw.KeyKP3:
 				FirstPerson.renderCascade3 = !FirstPerson.renderCascade3
+			case glfw.KeyKPDecimal:
+				FirstPerson.renderCascadeCenters = !FirstPerson.renderCascadeCenters
 			}
 		}
 	})
@@ -194,17 +198,22 @@ func (c *camera) Update(d float64) {
 			// TODO(brnelson): Remove this for performance reasons, at bare minimum it doesnt need done every single frame.
 			str := ""
 			cascadeCornerVertices := [8]mgl32.Vec3{}
+			cascadeCenter := mgl32.Vec3{}
 			for i, v := range cornerVertices {
 				temp := transform.Mul4x1(v.Vec4(1))
 				cascadeCornerVertices[i] = mgl32.Vec3{temp.X() / temp.W(), temp.Y() / temp.W(), temp.Z() / temp.W()}
+				cascadeCenter = cascadeCenter.Add(cascadeCornerVertices[i])
 				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", cascadeCornerVertices[i].X(), cascadeCornerVertices[i].Y(), cascadeCornerVertices[i].Z())
 			}
+			cascadeCenter = cascadeCenter.Mul(.125)
+
 			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_%d", j+1), Data2: str})
 
 			// Note this is using the second "value" of the lineIndices index.
 			for _, i := range lineIndices {
 				vertices = append(vertices, LineVertex{cascadeCornerVertices[i], cascadeColors[j]})
 			}
+			vertices = append(vertices, LineVertex{cascadeCenter, cascadeColors[j]})
 		}
 
 		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
@@ -248,14 +257,23 @@ func (c *camera) RenderFrustum() {
 	gl.BindVertexArray(c.vao)
 	if c.renderCascade1 {
 		gl.DrawArrays(gl.LINES, 0, 24)
+		if c.renderCascadeCenters {
+			gl.DrawArrays(gl.POINTS, 24, 1)
+		}
 	}
 	if c.renderCascade2 {
-		gl.DrawArrays(gl.LINES, 24, 24)
+		gl.DrawArrays(gl.LINES, 25, 24)
+		if c.renderCascadeCenters {
+			gl.DrawArrays(gl.POINTS, 49, 1)
+		}
 	}
 	if c.renderCascade3 {
-		gl.DrawArrays(gl.LINES, 48, 24)
+		gl.DrawArrays(gl.LINES, 50, 24)
+		if c.renderCascadeCenters {
+			gl.DrawArrays(gl.POINTS, 74, 1)
+		}
 	}
 	if c.renderFrustum {
-		gl.DrawArrays(gl.LINES, 72, 24)
+		gl.DrawArrays(gl.LINES, 75, 24)
 	}
 }

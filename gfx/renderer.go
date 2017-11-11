@@ -44,6 +44,7 @@ func InitRenderer() {
 	gl.DepthFunc(gl.LESS)
 	gl.Enable(gl.MULTISAMPLE)
 	gl.DepthMask(true)
+	gl.PointSize(8.0)
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 
 	lvs, err := shaders.NewLineVertexShader()
