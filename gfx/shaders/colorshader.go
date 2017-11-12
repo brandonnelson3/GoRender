@@ -20,6 +20,9 @@ const (
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
+uniform mat4 lightViewProj1;
+uniform mat4 lightViewProj2;
+uniform mat4 lightViewProj3;
 
 in vec3 vert;
 in vec3 norm;
@@ -31,7 +34,10 @@ out gl_PerVertex
 	vec4 position;
 	vec3 worldPosition;
 	vec3 normal;
-	vec2 uv;
+	vec2 uv;	
+	vec4 lightPosition1;
+	vec4 lightPosition2;
+	vec4 lightPosition3;
 } vertex_out;
 
 void main() {
@@ -40,6 +46,9 @@ void main() {
 	vertex_out.worldPosition = vec3(model * vec4(vert, 1));
 	vertex_out.normal = vec3(vec4(norm, 1));
 	vertex_out.uv = uv;
+	vertex_out.lightPosition1 = lightViewProj1 * model * vec4(vert, 1);
+	vertex_out.lightPosition2 = lightViewProj2 * model * vec4(vert, 1);
+	vertex_out.lightPosition3 = lightViewProj3 * model * vec4(vert, 1);
 }` + "\x00"
 	colorShaderOriginalFragmentSourceFile = `colorshader.frag`
 	colorShaderFragSrc                    = `
@@ -79,6 +88,9 @@ layout(std430, binding = 2) readonly buffer DirectionalLightBuffer {
 uniform int renderMode;
 uniform uint numTilesX;
 uniform sampler2D diffuse;
+uniform sampler2D shadowMap1;
+uniform sampler2D shadowMap2;
+uniform sampler2D shadowMap3;
 
 in VERTEX_OUT
 {
@@ -86,7 +98,10 @@ in VERTEX_OUT
 	vec4 position;
 	vec3 worldPosition;
 	vec3 normal;
-	vec2 uv;
+	vec2 uv;	
+	vec4 lightPosition1;
+	vec4 lightPosition2;
+	vec4 lightPosition3;
 } fragment_in;
 
 out vec4 outputColor;
@@ -122,8 +137,50 @@ void main() {
 		DirectionalLight directionalLight = directionalLightBuffer.data;
 		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
 		vec3 directionalLightColor = NdL * directionalLight.color * directionalLight.brightness;
+
+
+		float inputPositionInv = 1.0/fragment_in.position.w;
+		float lightPositionInv1 = 1.0/fragment_in.lightPosition1.w;
+		float lightPositionInv2 = 1.0/fragment_in.lightPosition2.w;
+		float lightPositionInv3 = 1.0/fragment_in.lightPosition3.w;
+
+		float depthTest = fragment_in.position.z * inputPositionInv;
+
+		vec2 shadowCoords[3] = vec2[](
+			vec2(fragment_in.lightPosition1.x * lightPositionInv1 * 0.5 + 0.5, -fragment_in.lightPosition1.y * lightPositionInv1 * 0.5 + 0.5), 
+			vec2(fragment_in.lightPosition2.x * lightPositionInv2 * 0.5 + 0.5, -fragment_in.lightPosition2.y * lightPositionInv2 * 0.5 + 0.5), 
+			vec2(fragment_in.lightPosition3.x * lightPositionInv3 * 0.5 + 0.5, -fragment_in.lightPosition3.y * lightPositionInv3 * 0.5 + 0.5)
+		);
+
+		float lightDepthValues[3] = float[](
+			fragment_in.lightPosition1.z * lightPositionInv1, 
+			fragment_in.lightPosition2.z * lightPositionInv2, 
+			fragment_in.lightPosition3.z * lightPositionInv3
+		);
+
+		int shadowIndex = 3;
+
+		if (saturate(shadowCoords[0].x) == shadowCoords[0].x && saturate(shadowCoords[0].y) == shadowCoords[0].y && depthTest > (1.0 - .05 * inputPositionInv)) {
+			shadowIndex = 0;
+		} else if(saturate(shadowCoords[1].x) == shadowCoords[1].x && saturate(shadowCoords[1].y) == shadowCoords[1].y && depthTest > (1.0 - .2 * inputPositionInv)) {
+			shadowIndex = 1;
+		} else if(saturate(shadowCoords[2].x) == shadowCoords[2].x && saturate(shadowCoords[2].y) == shadowCoords[2].y && depthTest > (1.0 - .6 * inputPositionInv)) {
+			shadowIndex = 2;
+		}
+
+		if (shadowIndex == 0) {
+			outputColor = vec4(1.0, 0, 0, 1.0);
+		} else 
+		if (shadowIndex == 1) {
+			outputColor = vec4(0, 1.0, 0, 1.0);
+		} else
+		if (shadowIndex == 2) {
+			outputColor = vec4(0, 0, 1.0, 1.0);
+		} else {
+			outputColor = vec4(1,1,1,1);
+		}
 		
-		outputColor = texture(diffuse, fragment_in.uv) * vec4(pointLightColor + directionalLightColor, 1.0);
+		//outputColor = texture(diffuse, fragment_in.uv) * vec4(pointLightColor + directionalLightColor, 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}
@@ -134,7 +191,7 @@ void main() {
 		outputColor = vec4(fragment_in.uv, 0, 1.0);
 	} else if (renderMode == 4) {
 		outputColor = texture(diffuse, fragment_in.uv);
-	}	
+	} 
 }
 ` + "\x00"
 )
@@ -143,7 +200,7 @@ void main() {
 type ColorVertexShader struct {
 	uint32
 
-	Projection, View, Model *uniforms.Matrix4
+	Projection, View, Model, LightViewProj1, LightViewProj2, LightViewProj3 *uniforms.Matrix4
 }
 
 // NewColorVertexShader instantiates and initializes a shader object.
@@ -186,14 +243,20 @@ func NewColorVertexShader() (*ColorVertexShader, error) {
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
 	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
+	lightViewProj1Loc := gl.GetUniformLocation(program, gl.Str("lightViewProj1\x00"))
+	lightViewProj2Loc := gl.GetUniformLocation(program, gl.Str("lightViewProj2\x00"))
+	lightViewProj3Loc := gl.GetUniformLocation(program, gl.Str("lightViewProj3\x00"))
 
 	gl.DeleteShader(shader)
 
 	return &ColorVertexShader{
-		uint32:     program,
-		Projection: uniforms.NewMatrix4(program, projectionLoc),
-		View:       uniforms.NewMatrix4(program, viewLoc),
-		Model:      uniforms.NewMatrix4(program, modelLoc),
+		uint32:         program,
+		Projection:     uniforms.NewMatrix4(program, projectionLoc),
+		View:           uniforms.NewMatrix4(program, viewLoc),
+		Model:          uniforms.NewMatrix4(program, modelLoc),
+		LightViewProj1: uniforms.NewMatrix4(program, lightViewProj1Loc),
+		LightViewProj2: uniforms.NewMatrix4(program, lightViewProj2Loc),
+		LightViewProj3: uniforms.NewMatrix4(program, lightViewProj3Loc),
 	}, nil
 }
 
@@ -224,6 +287,8 @@ type ColorFragmentShader struct {
 	Diffuse    *uniforms.Sampler2D
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
+
+	ShadowMap1, ShadowMap2, ShadowMap3 *uniforms.Sampler2D
 }
 
 // NewColorFragmentShader instantiates and initializes a ColorFragmentShader object.
@@ -266,6 +331,9 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 	renderModeLoc := gl.GetUniformLocation(program, gl.Str("renderMode\x00"))
 	numTilesXLoc := gl.GetUniformLocation(program, gl.Str("numTilesX\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
+	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
+	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
+	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
 
 	gl.DeleteShader(shader)
 
@@ -279,6 +347,9 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),
 		DirectionalLightBuffer:    buffers.NewBinding(2),
+		ShadowMap1:                uniforms.NewSampler2D(program, shadowMap1Loc),
+		ShadowMap2:                uniforms.NewSampler2D(program, shadowMap2Loc),
+		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 	}
 
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
