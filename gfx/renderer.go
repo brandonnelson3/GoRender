@@ -9,15 +9,10 @@ import (
 
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
-	"github.com/go-gl/mathgl/mgl32"
 )
 
-const (
-	// tileSize is the size in pixels of a tile for this renderer.
-	tileSize = 16
-	// shadowMapSize is the size of the square depth buffers used for CSM.
-	shadowMapSize = 2048
-)
+// TileSize is the size in pixels of a tile for this renderer.
+const TileSize = 16
 
 // Renderer is the global instance of a Renderer.
 var Renderer r
@@ -36,9 +31,6 @@ type r struct {
 	colorShaderPipeline uint32
 	colorVertexShader   *shaders.ColorVertexShader
 	colorFragmentShader *shaders.ColorFragmentShader
-
-	csmDepthMapFBO uint32
-	csmDepthMaps   [3]uint32
 
 	depthMapFBO, depthMap uint32
 
@@ -131,27 +123,6 @@ func InitRenderer() {
 	gl.ReadBuffer(gl.NONE)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
-	// Build CSM Depth FrameBuffers
-	var csmDepthMapFBO uint32
-	gl.GenFramebuffers(1, &csmDepthMapFBO)
-	var csmDepthMaps [3]uint32
-	gl.GenTextures(3, &csmDepthMaps[0])
-
-	for _, m := range csmDepthMaps {
-		gl.BindTexture(gl.TEXTURE_2D, m)
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, shadowMapSize, shadowMapSize, 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_BORDER)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_BORDER)
-	}
-
-	gl.BindFramebuffer(gl.FRAMEBUFFER, csmDepthMapFBO)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, csmDepthMaps[0], 0)
-	gl.DrawBuffer(gl.NONE)
-	gl.ReadBuffer(gl.NONE)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-
 	// TODO this should not be in renderer... probably should have some asset loading manager instead.
 	diffuseTexture, err := NewFromPng("assets/crate1_diffuse.png")
 	if err != nil {
@@ -176,8 +147,6 @@ func InitRenderer() {
 		colorFragmentShader: cfs,
 		depthMapFBO:         depthMapFBO,
 		depthMap:            depthMap,
-		csmDepthMapFBO:      csmDepthMapFBO,
-		csmDepthMaps:        csmDepthMaps,
 		// TODO remove these...
 		diffuseTexture: diffuseTexture,
 		sandTexture:    sandTexture,
@@ -186,12 +155,12 @@ func InitRenderer() {
 
 // getNumTilesX returns back the number of tiles in each the X dimension that are needed for the current window size.
 func getNumTilesX() uint32 {
-	return uint32((Window.Width + tileSize - 1) / tileSize)
+	return uint32((Window.Width + TileSize - 1) / TileSize)
 }
 
 // getNumTilesY returns back the number of tiles in each the Y dimension that are needed for the current window size.
 func getNumTilesY() uint32 {
-	return uint32((Window.Height + tileSize - 1) / tileSize)
+	return uint32((Window.Height + TileSize - 1) / TileSize)
 }
 
 // getTotalNumTiles returns back the total number of tiles required to cover the entire screen.
@@ -200,21 +169,7 @@ func getTotalNumTiles() uint32 {
 }
 
 func (renderer *r) Render(renderables []*Renderable) {
-	// Step 1: Depth Pass for each cascade for shadowing.
-	gl.BindProgramPipeline(renderer.depthShaderPipeline)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.csmDepthMapFBO)
-	renderer.depthVertexShader.View.Set(mgl32.Ident4())
-	for i, m := range renderer.csmDepthMaps {
-		gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, m, 0)
-		gl.Clear(gl.DEPTH_BUFFER_BIT)
-		renderer.depthVertexShader.Projection.Set(FirstPerson.shadowMatrices[i])
-		for _, renderable := range renderables {
-			renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-			renderable.Render()
-		}
-	}
-
-	// Step 2: Depth Pass for pointlight culling
+	// Step 1: Depth Pass for pointlight culling
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
@@ -225,7 +180,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 		renderable.Render()
 	}
 
-	// Step 3: Light culling
+	// Step 2: Light culling
 	renderer.lightCullingShader.Use()
 	renderer.lightCullingShader.View.Set(ActiveCamera.GetView())
 	renderer.lightCullingShader.Projection.Set(Window.GetProjection())
@@ -237,23 +192,17 @@ func (renderer *r) Render(renderables []*Renderable) {
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
 	gl.UseProgram(0)
 
-	// Step 4: Normal pass
+	// Step 3: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	gl.BindProgramPipeline(renderer.colorShaderPipeline)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	renderer.colorVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.colorVertexShader.Projection.Set(Window.GetProjection())
-	renderer.colorVertexShader.LightViewProj1.Set(FirstPerson.shadowMatrices[0])
-	renderer.colorVertexShader.LightViewProj2.Set(FirstPerson.shadowMatrices[1])
-	renderer.colorVertexShader.LightViewProj3.Set(FirstPerson.shadowMatrices[2])
 	renderer.colorFragmentShader.NumTilesX.Set(getNumTilesX())
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)
-	renderer.colorFragmentShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])
-	renderer.colorFragmentShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
-	renderer.colorFragmentShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
 		renderable.Render()

@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/brandonnelson3/GoRender/mathutils"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -59,7 +60,7 @@ func (window *w) RecenterCursor() {
 
 // GetProjection returns the projection matrix.
 func (window *w) GetProjection() mgl32.Mat4 {
-	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), window.nearPlane, window.farPlane)
+	return mathutils.PerspectiveZO(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), window.nearPlane, window.farPlane)
 }
 
 func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, float32) {
@@ -69,5 +70,5 @@ func getPortionOfRange(near, far, nearPortion, farPortion float32) (float32, flo
 
 // GetShadowCascadePerspectiveProjection returns the i-th cascade's frustum specific perspective projection matrix.
 func (window *w) GetShadowCascadePerspectiveProjection(i int) mgl32.Mat4 {
-	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), shadowSplits[i], shadowSplits[i+1])
+	return mathutils.PerspectiveZO(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), shadowSplits[i], shadowSplits[i+1])
 }

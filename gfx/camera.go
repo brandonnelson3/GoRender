@@ -5,8 +5,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/brandonnelson3/GameEngine/lights"
-	"github.com/brandonnelson3/GameEngine/utils"
 	"github.com/brandonnelson3/GoRender/input"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
@@ -44,7 +42,6 @@ type camera struct {
 	verticalAngle   float32
 	sensitivity     float32
 	speed           float32
-	shadowMatrices  [3]mgl32.Mat4
 
 	// Frustum rendering done internally without Renderable.
 	vao, vbo             uint32
@@ -75,8 +72,8 @@ func InitCameras() {
 		speed:                20,
 		vao:                  vao,
 		vbo:                  vbo,
-		renderCascade1:       false,
-		renderCascadeCenters: false,
+		renderCascade1:       true,
+		renderCascadeCenters: true,
 		renderCascade2:       false,
 		renderCascade3:       false,
 		renderFrustum:        false,
@@ -175,10 +172,10 @@ func (c *camera) Update(d float64) {
 	}
 	if c == FirstPerson {
 		cornerVertices := []mgl32.Vec3{
-			mgl32.Vec3{-1, 1, -1},
-			mgl32.Vec3{1, 1, -1},
-			mgl32.Vec3{1, -1, -1},
-			mgl32.Vec3{-1, -1, -1},
+			mgl32.Vec3{-1, 1, 0},
+			mgl32.Vec3{1, 1, 0},
+			mgl32.Vec3{1, -1, 0},
+			mgl32.Vec3{-1, -1, 0},
 			mgl32.Vec3{-1, 1, 1},
 			mgl32.Vec3{1, 1, 1},
 			mgl32.Vec3{1, -1, 1},
@@ -217,25 +214,6 @@ func (c *camera) Update(d float64) {
 				vertices = append(vertices, LineVertex{cascadeCornerVertices[i], cascadeColors[j]})
 			}
 			vertices = append(vertices, LineVertex{cascadeCenter, cascadeColors[j]})
-
-			radius := cascadeCornerVertices[0].Sub(cascadeCornerVertices[6]).Len() / 2.0
-			texelsPerUnit := shadowMapSize / radius * 2.0
-			scalarMatrix := mgl32.Scale3D(texelsPerUnit, texelsPerUnit, texelsPerUnit)
-			lookAt := mgl32.LookAtV(mgl32.Vec3{0, 0, 0}, lights.GetDirectionalLightDirection().Mul(-1), mgl32.Vec3{0, 1, 0})
-
-			lookAt = scalarMatrix.Mul4(lookAt)
-			lookAtInv := lookAt.Inv()
-
-			cascadeCenter = utils.Transform(cascadeCenter, lookAt)
-			cascadeCenter = mgl32.Vec3{float32(math.Floor(float64(cascadeCenter.X()))), float32(math.Floor(float64(cascadeCenter.Y()))), cascadeCenter.Z()}
-			cascadeCenter = utils.Transform(cascadeCenter, lookAtInv)
-
-			eye := cascadeCenter.Sub(lights.GetDirectionalLightDirection().Mul(radius * 2.0))
-
-			lightViewMatrix := mgl32.LookAtV(eye, cascadeCenter, mgl32.Vec3{0, 1, 0})
-			frustumOrthoMatrix := mgl32.Ortho(-radius, radius, -radius, radius, -6*radius, 6*radius)
-
-			c.shadowMatrices[j] = frustumOrthoMatrix.Mul4(lightViewMatrix)
 		}
 
 		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()

@@ -29,7 +29,7 @@ out gl_PerVertex
 void main() {
     gl_Position = projection * view * model * vec4(vert, 1);
 }` + "\x00"
-	depthShaderOriginalFragmentSourceFile = `depthshader.frag`
+	depthShaderOriginalFragmentSourceFile = `shader.frag`
 	depthShaderFragSrc                    = `
 #version 450
 void main() {
