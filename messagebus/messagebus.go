@@ -1,6 +1,7 @@
 package messagebus
 
 import (
+	"reflect"
 	"sync"
 )
 
@@ -39,4 +40,23 @@ func RegisterType(t string, h MessageHandler) {
 	mu.Lock()
 	defer mu.Unlock()
 	typeHandlers[t] = append(typeHandlers[t], h)
+}
+
+func Unregister(t string, h MessageHandler) {
+	mu.Lock()
+	defer mu.Unlock()
+	f1Ptr := reflect.ValueOf(h)
+
+	newHandlers := typeHandlers[t]
+
+	for i, f := range typeHandlers[t] {
+		f2Ptr := reflect.ValueOf(f)
+		if f1Ptr == f2Ptr {
+			newHandlers[i] = newHandlers[len(newHandlers)-1]
+			newHandlers = newHandlers[:len(newHandlers)-1]
+			break
+		}
+	}
+
+	typeHandlers[t] = newHandlers
 }
