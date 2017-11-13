@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", function() {
     var cascade1Element = document.getElementsByClassName('cascade_1')[0];
     var cascade2Element = document.getElementsByClassName('cascade_2')[0];
     var cascade3Element = document.getElementsByClassName('cascade_3')[0];
+    var cascade1ShadowElement = document.getElementsByClassName('cascade_shadow_1')[0];
+    var cascade2ShadowElement = document.getElementsByClassName('cascade_shadow_2')[0];
+    var cascade3ShadowElement = document.getElementsByClassName('cascade_shadow_3')[0];
 
     var chart = new SmoothieChart({
         millisPerPixel:72,
@@ -69,6 +72,18 @@ document.addEventListener("DOMContentLoaded", function() {
             
             if (data.type == "cascade_3") {
                 cascade3Element.innerHTML = data.value;
+            }
+
+            if (data.type == "cascade_shadow_1") {
+                cascade1ShadowElement.innerHTML = data.value;
+            }
+
+            if (data.type == "cascade_shadow_2") {
+                cascade2ShadowElement.innerHTML = data.value;
+            }
+            
+            if (data.type == "cascade_shadow_3") {
+                cascade3ShadowElement.innerHTML = data.value;
             }
         };
         ws.onclose = function(){

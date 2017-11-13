@@ -138,7 +138,7 @@ void main() {
 		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
 		vec3 directionalLightColor = NdL * directionalLight.color * directionalLight.brightness;
 
-
+		/*
 		float inputPositionInv = 1.0/fragment_in.position.w;
 		float lightPositionInv1 = 1.0/fragment_in.lightPosition1.w;
 		float lightPositionInv2 = 1.0/fragment_in.lightPosition2.w;
@@ -178,9 +178,9 @@ void main() {
 			outputColor = vec4(0, 0, 1.0, 1.0);
 		} else {
 			outputColor = vec4(1,1,1,1);
-		}
+		}*/
 		
-		//outputColor = texture(diffuse, fragment_in.uv) * vec4(pointLightColor + directionalLightColor, 1.0);
+		outputColor = texture(diffuse, fragment_in.uv) * vec4(pointLightColor + directionalLightColor, 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}

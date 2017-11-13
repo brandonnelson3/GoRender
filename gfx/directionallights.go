@@ -24,8 +24,8 @@ type DirectionalLight struct {
 func InitDirectionalLights() {
 	directionalLight = DirectionalLight{
 		Color:      mgl32.Vec3{1, 1, .8},
-		Brightness: 0.35,
-		Direction:  mgl32.Vec3{0.001, -1, 0.001}.Normalize(),
+		Brightness: 0.8,
+		Direction:  mgl32.Vec3{1, -1, 1}.Normalize(),
 	}
 
 	// Prepare light buffer
