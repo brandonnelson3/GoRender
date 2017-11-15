@@ -104,14 +104,6 @@ func InitRenderer() {
 	cfs.AddToPipeline(csp)
 	gl.ValidateProgramPipeline(csp)
 	cvs.BindVertexAttributes()
-	messagebus.RegisterType("key", func(m *messagebus.Message) {
-		pressedKeys := m.Data1.([]glfw.Key)
-		for _, key := range pressedKeys {
-			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
-				cfs.RenderMode.Set(int32(key - glfw.KeyF1))
-			}
-		}
-	})
 
 	var depthMapFBO uint32
 	gl.GenFramebuffers(1, &depthMapFBO)
@@ -151,6 +143,28 @@ func InitRenderer() {
 	gl.DrawBuffer(gl.NONE)
 	gl.ReadBuffer(gl.NONE)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+
+	UpdatePip(&csmDepthMaps[0], Window.GetNearFar(0))
+
+	messagebus.RegisterType("key", func(m *messagebus.Message) {
+		pressedKeys := m.Data1.([]glfw.Key)
+		for _, key := range pressedKeys {
+			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
+				cfs.RenderMode.Set(int32(key - glfw.KeyF1))
+			}
+		}
+		pressedKeysThisFrame := m.Data2.([]glfw.Key)
+		for _, key := range pressedKeysThisFrame {
+			switch key {
+			case glfw.KeyKP7:
+				UpdatePip(&csmDepthMaps[0], Window.GetNearFar(0))
+			case glfw.KeyKP8:
+				UpdatePip(&csmDepthMaps[1], Window.GetNearFar(1))
+			case glfw.KeyKP9:
+				UpdatePip(&csmDepthMaps[2], Window.GetNearFar(2))
+			}
+		}
+	})
 
 	// TODO this should not be in renderer... probably should have some asset loading manager instead.
 	diffuseTexture, err := NewFromPng("assets/crate1_diffuse.png")
@@ -201,10 +215,11 @@ func getTotalNumTiles() uint32 {
 
 func (renderer *r) Render(renderables []*Renderable) {
 	// Step 1: Depth Pass for each cascade for shadowing.
+	gl.Viewport(0, 0, shadowMapSize, shadowMapSize)
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.csmDepthMapFBO)
 	renderer.depthVertexShader.View.Set(mgl32.Ident4())
 	for i, m := range renderer.csmDepthMaps {
+		gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.csmDepthMapFBO)
 		gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, m, 0)
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 		renderer.depthVertexShader.Projection.Set(FirstPerson.shadowMatrices[i])
@@ -215,6 +230,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	}
 
 	// Step 2: Depth Pass for pointlight culling
+	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
@@ -265,4 +281,6 @@ func (renderer *r) Render(renderables []*Renderable) {
 		renderer.lineVertexShader.Projection.Set(Window.GetProjection())
 		FirstPerson.RenderFrustum()
 	}
+
+	RenderPip()
 }

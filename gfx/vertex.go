@@ -12,3 +12,8 @@ type Vertex struct {
 type LineVertex struct {
 	Vert, Color mgl32.Vec3
 }
+
+// PipVertex is a Vertex for the PIP.
+type PipVertex struct {
+	Vert, UV mgl32.Vec2
+}

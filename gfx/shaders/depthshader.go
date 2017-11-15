@@ -24,12 +24,10 @@ in vec2 uv;
 out gl_PerVertex
 {
 	vec4 gl_Position;	
-	vec4 position;
 } vertex_out;
 
 void main() {
-	gl_Position = projection * view * model * vec4(vert, 1);;
-	vertex_out.position = projection * view * model * vec4(vert, 1);;
+	gl_Position = projection * view * model * vec4(vert, 1);
 }` + "\x00"
 	depthShaderOriginalFragmentSourceFile = `depthshader.frag`
 	depthShaderFragSrc                    = `
@@ -38,14 +36,9 @@ void main() {
 in VERTEX_OUT
 {
 	vec4 gl_FragCoord;
-	vec4 position;
 } fragment_in;
 
-out vec4 outputColor;
-
 void main() {
-	float depthValue = fragment_in.position.z / fragment_in.position.w;
-	outputColor = vec4(depthValue, depthValue, depthValue, 1.0);
 }` + "\x00"
 )
 
@@ -98,8 +91,6 @@ func NewDepthVertexShader() (*DepthVertexShader, error) {
 	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
 
 	gl.DeleteShader(shader)
-
-	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &DepthVertexShader{
 		uint32:     program,

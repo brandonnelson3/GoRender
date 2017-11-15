@@ -44,7 +44,7 @@ void main() {
 	gl_Position = projection * view * model * vec4(vert, 1);
 	vertex_out.position = projection * view * model * vec4(vert, 1);
 	vertex_out.worldPosition = vec3(model * vec4(vert, 1));
-	vertex_out.normal = vec3(vec4(norm, 1));
+	vertex_out.normal = norm;
 	vertex_out.uv = uv;
 	vertex_out.lightPosition1 = lightViewProj1 * model * vec4(vert, 1);
 	vertex_out.lightPosition2 = lightViewProj2 * model * vec4(vert, 1);
@@ -106,8 +106,35 @@ in VERTEX_OUT
 
 out vec4 outputColor;
 
-float saturate(float v) {
-	return clamp(v, 0.0, 1.0);
+const float zFar = 1000;
+const float zNear = 0.1;
+const vec3 ambientLightColor = vec3(.2, .2, .2);
+
+float linearize(float depth)
+{
+	return (2 * zNear) / (zFar + zNear - depth * (zFar - zNear));
+}
+
+vec3 saturate(vec3 v) {
+	return vec3(clamp(v.x, 0.0, 1.0), clamp(v.y, 0.0, 1.0), clamp(v.z, 0.0, 1.0));
+}
+
+float getShadowFactor(int index, vec3 projCoords)
+{
+	float shadowMapDepth = 0.0f;
+    if(index == 0) {
+		shadowMapDepth = texture(shadowMap1, projCoords.xy).x;
+    } else if(index == 1) {
+		shadowMapDepth = texture(shadowMap2, projCoords.xy).x;
+    } else {
+		shadowMapDepth = texture(shadowMap3, projCoords.xy).x;
+	}
+	
+	float currentDepth = projCoords.z;
+	if (linearize(currentDepth-0.00005) > linearize(shadowMapDepth)) {
+		return 0.0f;
+	}
+	return 1.0f;
 }
 
 void main() {
@@ -119,7 +146,7 @@ void main() {
 	// TODO 1024 should be somewhere constant.
 	uint offset = index * 1024;
 	
-	if (renderMode == 0) {
+	if (renderMode == 0 || renderMode == 5) {
 		vec3 pointLightColor = vec3(0, 0, 0);
 
 		uint i=0;
@@ -136,35 +163,28 @@ void main() {
 		
 		DirectionalLight directionalLight = directionalLightBuffer.data;
 		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
-		vec3 directionalLightColor = NdL * directionalLight.color * directionalLight.brightness;
+		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
 
-		/*
+		
 		float inputPositionInv = 1.0/fragment_in.position.w;
 		float lightPositionInv1 = 1.0/fragment_in.lightPosition1.w;
 		float lightPositionInv2 = 1.0/fragment_in.lightPosition2.w;
 		float lightPositionInv3 = 1.0/fragment_in.lightPosition3.w;
 
-		float depthTest = fragment_in.position.z * inputPositionInv;
+		float depthTest = fragment_in.position.z;
 
-		vec2 shadowCoords[3] = vec2[](
-			vec2(fragment_in.lightPosition1.x * lightPositionInv1 * 0.5 + 0.5, -fragment_in.lightPosition1.y * lightPositionInv1 * 0.5 + 0.5), 
-			vec2(fragment_in.lightPosition2.x * lightPositionInv2 * 0.5 + 0.5, -fragment_in.lightPosition2.y * lightPositionInv2 * 0.5 + 0.5), 
-			vec2(fragment_in.lightPosition3.x * lightPositionInv3 * 0.5 + 0.5, -fragment_in.lightPosition3.y * lightPositionInv3 * 0.5 + 0.5)
-		);
-
-		float lightDepthValues[3] = float[](
-			fragment_in.lightPosition1.z * lightPositionInv1, 
-			fragment_in.lightPosition2.z * lightPositionInv2, 
-			fragment_in.lightPosition3.z * lightPositionInv3
+		vec3 shadowCoords[3] = vec3[](
+			fragment_in.lightPosition1 * 0.5 + 0.5, 
+			fragment_in.lightPosition2 * 0.5 + 0.5, 
+			fragment_in.lightPosition3 * 0.5 + 0.5
 		);
 
 		int shadowIndex = 3;
-
-		if (saturate(shadowCoords[0].x) == shadowCoords[0].x && saturate(shadowCoords[0].y) == shadowCoords[0].y && depthTest > (1.0 - .05 * inputPositionInv)) {
+		if (depthTest < 15) {
 			shadowIndex = 0;
-		} else if(saturate(shadowCoords[1].x) == shadowCoords[1].x && saturate(shadowCoords[1].y) == shadowCoords[1].y && depthTest > (1.0 - .2 * inputPositionInv)) {
+		} else if(depthTest < 100) {
 			shadowIndex = 1;
-		} else if(saturate(shadowCoords[2].x) == shadowCoords[2].x && saturate(shadowCoords[2].y) == shadowCoords[2].y && depthTest > (1.0 - .6 * inputPositionInv)) {
+		} else if(depthTest < 500) {
 			shadowIndex = 2;
 		}
 
@@ -178,9 +198,18 @@ void main() {
 			outputColor = vec4(0, 0, 1.0, 1.0);
 		} else {
 			outputColor = vec4(1,1,1,1);
-		}*/
+		}
+
+		if (renderMode == 5) {
+			return;
+		}
+
+		float shadowFactor = 1.0f;		
+		if (shadowIndex != 3) {
+			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
+		} 
 		
-		outputColor = texture(diffuse, fragment_in.uv) * vec4(pointLightColor + directionalLightColor, 1.0);
+		outputColor = texture(diffuse, fragment_in.uv) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}

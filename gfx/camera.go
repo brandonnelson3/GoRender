@@ -26,9 +26,10 @@ var (
 	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
 	ActiveCamera *camera
 
-	redColor   = mgl32.Vec3{1, 0, 0}
-	greenColor = mgl32.Vec3{0, 1, 0}
-	blueColor  = mgl32.Vec3{0, 0, 1}
+	redColor    = mgl32.Vec3{1, 0, 0}
+	greenColor  = mgl32.Vec3{0, 1, 0}
+	blueColor   = mgl32.Vec3{0, 0, 1}
+	yellowColor = mgl32.Vec3{1, 1, 0}
 
 	cascadeColors = []mgl32.Vec3{redColor, blueColor, greenColor}
 
@@ -45,15 +46,16 @@ type camera struct {
 	shadowMatrices  [3]mgl32.Mat4
 
 	// Frustum rendering done internally without Renderable.
-	vao, vbo                    uint32
-	renderFrustum               bool
-	renderCascade1              bool
-	renderCascade2              bool
-	renderCascade3              bool
-	renderCascadeCenters        bool
-	renderCascade1ShadowFrustum bool
-	renderCascade2ShadowFrustum bool
-	renderCascade3ShadowFrustum bool
+	vao, vbo                       uint32
+	renderFrustum                  bool
+	renderCascade1                 bool
+	renderCascade2                 bool
+	renderCascade3                 bool
+	renderCascadeCenters           bool
+	renderCascade1ShadowFrustum    bool
+	renderCascade2ShadowFrustum    bool
+	renderCascade3ShadowFrustum    bool
+	renderCascadeShadowFrustumEyes bool
 }
 
 // InitCameras instantiates new cameras into the package first and third person package variables.
@@ -69,21 +71,22 @@ func InitCameras() {
 	Renderer.lineVertexShader.BindVertexAttributes()
 
 	FirstPerson = &camera{
-		position:                    mgl32.Vec3{0, 9, 0},
-		horizontalAngle:             0,
-		verticalAngle:               0,
-		sensitivity:                 0.001,
-		speed:                       20,
-		vao:                         vao,
-		vbo:                         vbo,
-		renderCascade1:              false,
-		renderCascade2:              false,
-		renderCascade3:              false,
-		renderCascadeCenters:        false,
-		renderFrustum:               false,
-		renderCascade1ShadowFrustum: false,
-		renderCascade2ShadowFrustum: false,
-		renderCascade3ShadowFrustum: false,
+		position:                       mgl32.Vec3{0, 9, 0},
+		horizontalAngle:                0,
+		verticalAngle:                  0,
+		sensitivity:                    0.001,
+		speed:                          20,
+		vao:                            vao,
+		vbo:                            vbo,
+		renderCascade1:                 false,
+		renderCascade2:                 false,
+		renderCascade3:                 false,
+		renderCascadeCenters:           false,
+		renderFrustum:                  false,
+		renderCascade1ShadowFrustum:    false,
+		renderCascade2ShadowFrustum:    false,
+		renderCascade3ShadowFrustum:    false,
+		renderCascadeShadowFrustumEyes: false,
 	}
 
 	ThirdPerson = &camera{
@@ -137,6 +140,8 @@ func InitCameras() {
 				FirstPerson.renderCascade2ShadowFrustum = !FirstPerson.renderCascade2ShadowFrustum
 			case glfw.KeyKP6:
 				FirstPerson.renderCascade3ShadowFrustum = !FirstPerson.renderCascade3ShadowFrustum
+			case glfw.KeyKPAdd:
+				FirstPerson.renderCascadeShadowFrustumEyes = !FirstPerson.renderCascadeShadowFrustumEyes
 			}
 		}
 	})
@@ -254,19 +259,21 @@ func (c *camera) Update(d float64) {
 			cascadeCenter = mgl32.Vec3{float32(math.Floor(float64(cascadeCenter.X()))), float32(math.Floor(float64(cascadeCenter.Y()))), cascadeCenter.Z()}
 			cascadeCenter = Transform(cascadeCenter, lookAtInv)
 
-			eye := cascadeCenter.Sub(GetDirectionalLightDirection().Mul(radius * 2.0))
+			eye := cascadeCenter.Sub(GetDirectionalLightDirection())
+
+			vertices = append(vertices, LineVertex{eye, yellowColor})
 
 			lightViewMatrix := mgl32.LookAtV(eye, cascadeCenter, mgl32.Vec3{0, 1, 0})
 			frustumOrthoMatrix := mgl32.Ortho(-radius, radius, -radius, radius, -6*radius, 6*radius)
 
-			c.shadowMatrices[j] = frustumOrthoMatrix.Mul4(lightViewMatrix).Transpose().Inv().Transpose()
+			c.shadowMatrices[j] = frustumOrthoMatrix.Mul4(lightViewMatrix)
+			transform = c.shadowMatrices[j].Transpose().Inv()
 
 			// Shadow Frustum Vert Calculation
 			str = ""
 			cascadeCornerVertices = [8]mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				temp := c.shadowMatrices[j].Mul4x1(v.Vec4(1))
-				cascadeCornerVertices[i] = mgl32.Vec3{temp.X(), temp.Y(), temp.Z()}
+				cascadeCornerVertices[i] = TransformTransposed(v, transform)
 				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", cascadeCornerVertices[i].X(), cascadeCornerVertices[i].Y(), cascadeCornerVertices[i].Z())
 			}
 			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_shadow_%d", j+1), Data2: str})
@@ -327,30 +334,39 @@ func (c *camera) RenderFrustum() {
 		}
 	}
 	if c.renderCascade1ShadowFrustum {
-		gl.DrawArrays(gl.LINES, 25, 24)
+		if c.renderCascadeShadowFrustumEyes {
+			gl.DrawArrays(gl.POINTS, 25, 1)
+		}
+		gl.DrawArrays(gl.LINES, 26, 24)
 	}
 
 	if c.renderCascade2 {
-		gl.DrawArrays(gl.LINES, 49, 24)
+		gl.DrawArrays(gl.LINES, 50, 24)
 		if c.renderCascadeCenters {
-			gl.DrawArrays(gl.POINTS, 73, 1)
+			gl.DrawArrays(gl.POINTS, 74, 1)
 		}
 	}
 	if c.renderCascade2ShadowFrustum {
-		gl.DrawArrays(gl.LINES, 74, 24)
+		if c.renderCascadeShadowFrustumEyes {
+			gl.DrawArrays(gl.POINTS, 75, 1)
+		}
+		gl.DrawArrays(gl.LINES, 76, 24)
 	}
 
 	if c.renderCascade3 {
-		gl.DrawArrays(gl.LINES, 98, 24)
+		gl.DrawArrays(gl.LINES, 100, 24)
 		if c.renderCascadeCenters {
-			gl.DrawArrays(gl.POINTS, 122, 1)
+			gl.DrawArrays(gl.POINTS, 124, 1)
 		}
 	}
 	if c.renderCascade3ShadowFrustum {
-		gl.DrawArrays(gl.LINES, 123, 24)
+		if c.renderCascadeShadowFrustumEyes {
+			gl.DrawArrays(gl.POINTS, 125, 1)
+		}
+		gl.DrawArrays(gl.LINES, 126, 24)
 	}
 
 	if c.renderFrustum {
-		gl.DrawArrays(gl.LINES, 147, 24)
+		gl.DrawArrays(gl.LINES, 150, 24)
 	}
 }
