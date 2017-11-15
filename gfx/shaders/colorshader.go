@@ -87,6 +87,8 @@ layout(std430, binding = 2) readonly buffer DirectionalLightBuffer {
 
 uniform int renderMode;
 uniform uint numTilesX;
+uniform float zNear;
+uniform float zFar;
 uniform sampler2D diffuse;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -106,8 +108,6 @@ in VERTEX_OUT
 
 out vec4 outputColor;
 
-const float zFar = 1000;
-const float zNear = 0.1;
 const vec3 ambientLightColor = vec3(.2, .2, .2);
 
 float linearize(float depth)
@@ -313,6 +313,8 @@ type ColorFragmentShader struct {
 
 	RenderMode *uniforms.Int
 	NumTilesX  *uniforms.UInt
+	ZNear      *uniforms.Float
+	ZFar       *uniforms.Float
 	Diffuse    *uniforms.Sampler2D
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
@@ -359,6 +361,8 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 
 	renderModeLoc := gl.GetUniformLocation(program, gl.Str("renderMode\x00"))
 	numTilesXLoc := gl.GetUniformLocation(program, gl.Str("numTilesX\x00"))
+	zNearLoc := gl.GetUniformLocation(program, gl.Str("zNear\x00"))
+	zFarLoc := gl.GetUniformLocation(program, gl.Str("zFar\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
@@ -372,6 +376,8 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		uint32:                    program,
 		RenderMode:                uniforms.NewInt(program, renderModeLoc),
 		NumTilesX:                 uniforms.NewUInt(program, numTilesXLoc),
+		ZNear:                     uniforms.NewFloat(program, zNearLoc),
+		ZFar:                      uniforms.NewFloat(program, zFarLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),

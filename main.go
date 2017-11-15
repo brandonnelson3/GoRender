@@ -54,9 +54,9 @@ func main() {
 	gfx.InitPip()
 
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
-	for x := 0; x < 5; x++ {
-		for y := 0; y < 5; y++ {
-			for z := 0; z < 5; z++ {
+	for x := 0; x < 2; x++ {
+		for y := 0; y < 2; y++ {
+			for z := 0; z < 2; z++ {
 				r := gfx.NewRenderable(gfx.CubeVertices)
 				r.Rotation = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
 				r.Scale = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}

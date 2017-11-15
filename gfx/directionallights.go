@@ -25,7 +25,7 @@ func InitDirectionalLights() {
 	directionalLight = DirectionalLight{
 		Color:      mgl32.Vec3{1, 1, 1},
 		Brightness: 1.0,
-		Direction:  mgl32.Vec3{0, -1, 1}.Normalize(),
+		Direction:  mgl32.Vec3{.7, -1, .7}.Normalize(),
 	}
 
 	// Prepare light buffer

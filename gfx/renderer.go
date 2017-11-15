@@ -264,6 +264,8 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorVertexShader.LightViewProj3.Set(FirstPerson.shadowMatrices[2])
 	renderer.colorFragmentShader.NumTilesX.Set(getNumTilesX())
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
+	renderer.colorFragmentShader.ZNear.Set(Window.nearPlane)
+	renderer.colorFragmentShader.ZFar.Set(Window.farPlane)
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)
