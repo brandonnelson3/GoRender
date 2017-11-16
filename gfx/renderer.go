@@ -20,7 +20,11 @@ const (
 )
 
 // Renderer is the global instance of a Renderer.
-var Renderer r
+var (
+	Renderer r
+
+	ambientLightColor = mgl32.Vec3{.2, .2, .2}
+)
 
 type r struct {
 	lineShaderPipeline uint32
@@ -266,6 +270,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.colorFragmentShader.ZNear.Set(Window.nearPlane)
 	renderer.colorFragmentShader.ZFar.Set(Window.farPlane)
+	renderer.colorFragmentShader.AmbientLightColor.Set(ambientLightColor)
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)

@@ -89,6 +89,7 @@ uniform int renderMode;
 uniform uint numTilesX;
 uniform float zNear;
 uniform float zFar;
+uniform vec3 ambientLightColor;
 uniform sampler2D diffuse;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -107,8 +108,6 @@ in VERTEX_OUT
 } fragment_in;
 
 out vec4 outputColor;
-
-const vec3 ambientLightColor = vec3(.2, .2, .2);
 
 float linearize(float depth)
 {
@@ -131,7 +130,7 @@ float getShadowFactor(int index, vec3 projCoords)
 	}
 	
 	float currentDepth = projCoords.z;
-	if (linearize(currentDepth-0.00005) > linearize(shadowMapDepth)) {
+	if (linearize(currentDepth-0.0005) > linearize(shadowMapDepth)) {
 		return 0.0f;
 	}
 	return 1.0f;
@@ -164,7 +163,6 @@ void main() {
 		DirectionalLight directionalLight = directionalLightBuffer.data;
 		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
 		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
-
 		
 		float inputPositionInv = 1.0/fragment_in.position.w;
 		float lightPositionInv1 = 1.0/fragment_in.lightPosition1.w;
@@ -180,36 +178,28 @@ void main() {
 		);
 
 		int shadowIndex = 3;
-		if (depthTest < 15) {
+		vec3 shadowIndexColor = vec3(1, 1, 1);
+		if (depthTest < 15) {			
 			shadowIndex = 0;
+			shadowIndexColor = vec3(1, .5, .5);
 		} else if(depthTest < 100) {
 			shadowIndex = 1;
+			shadowIndexColor = vec3(.5, 1, .5);
 		} else if(depthTest < 500) {
 			shadowIndex = 2;
+			shadowIndexColor = vec3(.5, .5, 1);
 		}
 
-		if (shadowIndex == 0) {
-			outputColor = vec4(1.0, 0, 0, 1.0);
-		} else 
-		if (shadowIndex == 1) {
-			outputColor = vec4(0, 1.0, 0, 1.0);
-		} else
-		if (shadowIndex == 2) {
-			outputColor = vec4(0, 0, 1.0, 1.0);
-		} else {
-			outputColor = vec4(1,1,1,1);
+		if (renderMode == 0) {
+			shadowIndexColor = vec3(1, 1, 1);
 		}
-
-		if (renderMode == 5) {
-			return;
-		}
-
+		
 		float shadowFactor = 1.0f;		
 		if (shadowIndex != 3) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
 		} 
 		
-		outputColor = texture(diffuse, fragment_in.uv) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
+		outputColor = texture(diffuse, fragment_in.uv) * vec4(shadowIndexColor, 1.0) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}
@@ -311,11 +301,12 @@ func (s *ColorVertexShader) BindVertexAttributes() {
 type ColorFragmentShader struct {
 	uint32
 
-	RenderMode *uniforms.Int
-	NumTilesX  *uniforms.UInt
-	ZNear      *uniforms.Float
-	ZFar       *uniforms.Float
-	Diffuse    *uniforms.Sampler2D
+	RenderMode        *uniforms.Int
+	NumTilesX         *uniforms.UInt
+	ZNear             *uniforms.Float
+	ZFar              *uniforms.Float
+	AmbientLightColor *uniforms.Vector3
+	Diffuse           *uniforms.Sampler2D
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
 
@@ -363,6 +354,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 	numTilesXLoc := gl.GetUniformLocation(program, gl.Str("numTilesX\x00"))
 	zNearLoc := gl.GetUniformLocation(program, gl.Str("zNear\x00"))
 	zFarLoc := gl.GetUniformLocation(program, gl.Str("zFar\x00"))
+	ambientLightColorLoc := gl.GetUniformLocation(program, gl.Str("ambientLightColor\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
@@ -378,6 +370,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		NumTilesX:                 uniforms.NewUInt(program, numTilesXLoc),
 		ZNear:                     uniforms.NewFloat(program, zNearLoc),
 		ZFar:                      uniforms.NewFloat(program, zFarLoc),
+		AmbientLightColor:         uniforms.NewVector3(program, ambientLightColorLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),
