@@ -95,6 +95,8 @@ uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
 uniform sampler2D shadowMap3;
 
+const float shadowBias = 0.0005f;
+
 in VERTEX_OUT
 {
 	vec4 gl_FragCoord;
@@ -119,21 +121,27 @@ vec3 saturate(vec3 v) {
 }
 
 float getShadowFactor(int index, vec3 projCoords)
-{
-	float shadowMapDepth = 0.0f;
-    if(index == 0) {
-		shadowMapDepth = texture(shadowMap1, projCoords.xy).x;
-    } else if(index == 1) {
-		shadowMapDepth = texture(shadowMap2, projCoords.xy).x;
-    } else {
-		shadowMapDepth = texture(shadowMap3, projCoords.xy).x;
-	}
-	
+{		
+	float texelSize = 1.0 / 2048.0;
 	float currentDepth = projCoords.z;
-	if (linearize(currentDepth-0.0005) > linearize(shadowMapDepth)) {
-		return 0.0f;
+	float shadowFactor = 1.0f;
+	for (int i=-1; i<=1; i++){
+		for (int j=-1; j<=1; j++){
+			float shadowMapDepth = 0.0f;
+			if(index == 0) {
+				shadowMapDepth = texture(shadowMap1, projCoords.xy + vec2(i,j) * texelSize).x;
+			} else if(index == 1) {
+				shadowMapDepth = texture(shadowMap2, projCoords.xy + vec2(i,j) * texelSize).x;
+			} else {
+				shadowMapDepth = texture(shadowMap3, projCoords.xy + vec2(i,j) * texelSize).x;
+			}
+			
+			if (linearize(currentDepth-shadowBias) > linearize(shadowMapDepth)) {
+				shadowFactor -= 0.1f;
+			}
+		}
 	}
-	return 1.0f;
+	return shadowFactor;
 }
 
 void main() {
