@@ -122,7 +122,7 @@ vec3 saturate(vec3 v) {
 
 float getShadowFactor(int index, vec3 projCoords)
 {		
-	float texelSize = 1.0 / 2048.0;
+	float texelSize = 1.0 / 4096.0;
 	float currentDepth = projCoords.z;
 	float shadowFactor = 1.0f;
 	for (int i=-1; i<=1; i++){

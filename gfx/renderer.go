@@ -16,7 +16,7 @@ const (
 	// tileSize is the size in pixels of a tile for this renderer.
 	tileSize = 16
 	// shadowMapSize is the size of the square depth buffers used for CSM.
-	shadowMapSize = 2048
+	shadowMapSize = 4096
 	// NumberOfCascades is the number of shadow cascades being used.
 	NumberOfCascades = 4
 )
