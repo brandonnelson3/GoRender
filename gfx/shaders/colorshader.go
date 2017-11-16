@@ -174,13 +174,6 @@ void main() {
 		DirectionalLight directionalLight = directionalLightBuffer.data;
 		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
 		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
-		
-		float inputPositionInv = 1.0/fragment_in.position.w;
-		float lightPositionInv1 = 1.0/fragment_in.lightPositions[0].w;
-		float lightPositionInv2 = 1.0/fragment_in.lightPositions[1].w;
-		float lightPositionInv3 = 1.0/fragment_in.lightPositions[2].w;
-		float lightPositionInv4 = 1.0/fragment_in.lightPositions[3].w;
-
 		float depthTest = fragment_in.position.z;
 
 		vec3 shadowCoords[4] = vec3[](
