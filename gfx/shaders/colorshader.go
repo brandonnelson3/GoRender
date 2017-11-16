@@ -92,6 +92,7 @@ uniform float zNear;
 uniform float zFar;
 uniform float shadowMapSize;
 uniform vec3 ambientLightColor;
+uniform float cascadeDepthLimits[NUMBER_OF_CASCADES + 1];
 uniform sampler2D diffuse;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -185,13 +186,13 @@ void main() {
 
 		int shadowIndex = 4;
 		vec3 shadowIndexColor = vec3(1, 1, 1);
-		if (depthTest < 15) {			
+		if (depthTest < cascadeDepthLimits[1]) {			
 			shadowIndex = 0;
 			shadowIndexColor = vec3(1, .5, .5);
-		} else if(depthTest < 100) {
+		} else if(depthTest < cascadeDepthLimits[2]) {
 			shadowIndex = 1;
 			shadowIndexColor = vec3(.5, 1, .5);
-		} else if(depthTest < 500) {
+		} else if(depthTest < cascadeDepthLimits[3]) {
 			shadowIndex = 2;
 			shadowIndexColor = vec3(.5, .5, 1);
 		} else {
@@ -307,13 +308,14 @@ func (s *ColorVertexShader) BindVertexAttributes() {
 type ColorFragmentShader struct {
 	uint32
 
-	RenderMode        *uniforms.Int
-	NumTilesX         *uniforms.UInt
-	ZNear             *uniforms.Float
-	ZFar              *uniforms.Float
-	ShadowMapSize     *uniforms.Float
-	AmbientLightColor *uniforms.Vector3
-	Diffuse           *uniforms.Sampler2D
+	RenderMode         *uniforms.Int
+	NumTilesX          *uniforms.UInt
+	ZNear              *uniforms.Float
+	ZFar               *uniforms.Float
+	ShadowMapSize      *uniforms.Float
+	AmbientLightColor  *uniforms.Vector3
+	CascadeDepthLimits *uniforms.FloatArray
+	Diffuse            *uniforms.Sampler2D
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
 
@@ -363,6 +365,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 	zFarLoc := gl.GetUniformLocation(program, gl.Str("zFar\x00"))
 	shadowMapSizeLoc := gl.GetUniformLocation(program, gl.Str("shadowMapSize\x00"))
 	ambientLightColorLoc := gl.GetUniformLocation(program, gl.Str("ambientLightColor\x00"))
+	cascadeDepthLimitsLoc := gl.GetUniformLocation(program, gl.Str("cascadeDepthLimits\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
@@ -381,6 +384,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		ZFar:                      uniforms.NewFloat(program, zFarLoc),
 		ShadowMapSize:             uniforms.NewFloat(program, shadowMapSizeLoc),
 		AmbientLightColor:         uniforms.NewVector3(program, ambientLightColorLoc),
+		CascadeDepthLimits:        uniforms.NewFloatArray(program, cascadeDepthLimitsLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),

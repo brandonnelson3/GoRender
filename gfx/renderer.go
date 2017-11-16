@@ -26,6 +26,11 @@ var (
 	Renderer r
 
 	ambientLightColor = mgl32.Vec3{.2, .2, .2}
+
+	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
+	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
+	// should be n+1 elements in this list where n is the number of cascades.
+	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 20, 100, 500, 1000}
 )
 
 type r struct {
@@ -274,6 +279,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.ZFar.Set(Window.farPlane)
 	renderer.colorFragmentShader.ShadowMapSize.Set(shadowMapSize)
 	renderer.colorFragmentShader.AmbientLightColor.Set(ambientLightColor)
+	renderer.colorFragmentShader.CascadeDepthLimits.Set(&ShadowSplits[0], NumberOfCascades+1)
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)
