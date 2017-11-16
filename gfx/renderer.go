@@ -30,7 +30,7 @@ var (
 	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
-	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 20, 100, 500, 1000}
+	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 20, 70, 300, 1000}
 )
 
 type r struct {
