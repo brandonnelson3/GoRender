@@ -159,7 +159,8 @@ void main() {
 	
 	if (renderMode == 0 || renderMode == 5) {
 		vec3 pointLightColor = vec3(0, 0, 0);
-		for (uint i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
+		uint i=0;
+		for (i=0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
 			uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 			PointLight light = lightBuffer.data[lightIndex];
 			vec3 lightVector = light.position - fragment_in.worldPosition;
