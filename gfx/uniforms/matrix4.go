@@ -11,7 +11,7 @@ type Matrix4 struct {
 	uniform int32
 }
 
-// NewMatrix4 instantiates an identity matrix for the provided program and uniform location.
+// NewMatrix4 instantiates a matrix for the provided program and uniform location.
 func NewMatrix4(p uint32, u int32) *Matrix4 {
 	return &Matrix4{p, u}
 }

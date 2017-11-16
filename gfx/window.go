@@ -14,7 +14,7 @@ var (
 	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
-	shadowSplits = []float32{0.1, 15, 100, 500}
+	shadowSplits = []float32{0.1, 15, 100, 500, 1000}
 )
 
 // Window is GoRender's primary Window representation. This class is a wrapper around an opengl glfw window, and GoRender specific functionality.

@@ -17,6 +17,8 @@ const (
 	tileSize = 16
 	// shadowMapSize is the size of the square depth buffers used for CSM.
 	shadowMapSize = 2048
+	// NumberOfCascades is the number of shadow cascades being used.
+	NumberOfCascades = 4
 )
 
 // Renderer is the global instance of a Renderer.
@@ -42,7 +44,7 @@ type r struct {
 	colorFragmentShader *shaders.ColorFragmentShader
 
 	csmDepthMapFBO uint32
-	csmDepthMaps   [3]uint32
+	csmDepthMaps   [NumberOfCascades]uint32
 
 	depthMapFBO, depthMap uint32
 
@@ -130,8 +132,8 @@ func InitRenderer() {
 	// Build CSM Depth FrameBuffers
 	var csmDepthMapFBO uint32
 	gl.GenFramebuffers(1, &csmDepthMapFBO)
-	var csmDepthMaps [3]uint32
-	gl.GenTextures(3, &csmDepthMaps[0])
+	var csmDepthMaps [NumberOfCascades]uint32
+	gl.GenTextures(NumberOfCascades, &csmDepthMaps[0])
 
 	for _, m := range csmDepthMaps {
 		gl.BindTexture(gl.TEXTURE_2D, m)
@@ -166,6 +168,8 @@ func InitRenderer() {
 				UpdatePip(&csmDepthMaps[1], Window.GetNearFar(1))
 			case glfw.KeyKP9:
 				UpdatePip(&csmDepthMaps[2], Window.GetNearFar(2))
+			case glfw.KeyKPDivide:
+				UpdatePip(&csmDepthMaps[3], Window.GetNearFar(3))
 			}
 		}
 	})
@@ -249,7 +253,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.lightCullingShader.Use()
 	renderer.lightCullingShader.View.Set(ActiveCamera.GetView())
 	renderer.lightCullingShader.Projection.Set(Window.GetProjection())
-	renderer.lightCullingShader.DepthMap.Set(gl.TEXTURE4, 4, renderer.depthMap)
+	renderer.lightCullingShader.DepthMap.Set(gl.TEXTURE5, 5, renderer.depthMap)
 	renderer.lightCullingShader.ScreenSize.Set(uniforms.UIVec2{Window.Width, Window.Height})
 	renderer.lightCullingShader.LightCount.Set(GetNumPointLights())
 	renderer.lightCullingShader.LightBuffer.Set(GetPointLightBuffer())
@@ -263,9 +267,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	renderer.colorVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.colorVertexShader.Projection.Set(Window.GetProjection())
-	renderer.colorVertexShader.LightViewProj1.Set(FirstPerson.shadowMatrices[0])
-	renderer.colorVertexShader.LightViewProj2.Set(FirstPerson.shadowMatrices[1])
-	renderer.colorVertexShader.LightViewProj3.Set(FirstPerson.shadowMatrices[2])
+	renderer.colorVertexShader.LightViewProjs.Set(&FirstPerson.shadowMatrices[0][0], NumberOfCascades)
 	renderer.colorFragmentShader.NumTilesX.Set(getNumTilesX())
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.colorFragmentShader.ZNear.Set(Window.nearPlane)
@@ -277,6 +279,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])
 	renderer.colorFragmentShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
 	renderer.colorFragmentShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
+	renderer.colorFragmentShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	for _, renderable := range renderables {
 		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
 		renderable.Render()

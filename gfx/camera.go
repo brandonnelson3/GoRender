@@ -31,7 +31,7 @@ var (
 	blueColor   = mgl32.Vec3{0, 0, 1}
 	yellowColor = mgl32.Vec3{1, 1, 0}
 
-	cascadeColors = []mgl32.Vec3{redColor, blueColor, greenColor}
+	cascadeColors = []mgl32.Vec3{redColor, greenColor, blueColor, yellowColor}
 
 	whiteColor = mgl32.Vec3{1, 1, 1}
 )
@@ -43,7 +43,7 @@ type camera struct {
 	verticalAngle   float32
 	sensitivity     float32
 	speed           float32
-	shadowMatrices  [3]mgl32.Mat4
+	shadowMatrices  [NumberOfCascades]mgl32.Mat4
 
 	// Frustum rendering done internally without Renderable.
 	vao, vbo                       uint32
@@ -220,21 +220,16 @@ func (c *camera) Update(d float64) {
 		}
 
 		vertices := []LineVertex{}
-		for j := 0; j < 3; j++ {
+		for j := 0; j < NumberOfCascades; j++ {
 			transform := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv()
 
-			// TODO(brnelson): Remove this for performance reasons, at bare minimum it doesnt need done every single frame.
-			str := ""
 			cascadeCornerVertices := [8]mgl32.Vec3{}
 			cascadeCenter := mgl32.Vec3{}
 			for i, v := range cornerVertices {
 				cascadeCornerVertices[i] = TransformTransposed(v, transform)
 				cascadeCenter = cascadeCenter.Add(cascadeCornerVertices[i])
-				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", cascadeCornerVertices[i].X(), cascadeCornerVertices[i].Y(), cascadeCornerVertices[i].Z())
 			}
 			cascadeCenter = cascadeCenter.Mul(.125)
-
-			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_%d", j+1), Data2: str})
 
 			// Note this is using the second "value" of the lineIndices index.
 			for _, i := range lineIndices {
@@ -270,13 +265,10 @@ func (c *camera) Update(d float64) {
 			transform = c.shadowMatrices[j].Transpose().Inv()
 
 			// Shadow Frustum Vert Calculation
-			str = ""
 			cascadeCornerVertices = [8]mgl32.Vec3{}
 			for i, v := range cornerVertices {
 				cascadeCornerVertices[i] = TransformTransposed(v, transform)
-				str += fmt.Sprintf("[%.2f, %.2f, %.2f]<br>", cascadeCornerVertices[i].X(), cascadeCornerVertices[i].Y(), cascadeCornerVertices[i].Z())
 			}
-			messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: fmt.Sprintf("cascade_shadow_%d", j+1), Data2: str})
 
 			// Note this is using the second "value" of the lineIndices index.
 			for _, i := range lineIndices {

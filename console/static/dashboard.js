@@ -61,30 +61,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (data.type == "timer_fps") {
                 line.append(new Date().getTime(), data.value);
             }
-
-            if (data.type == "cascade_1") {
-                cascade1Element.innerHTML = data.value;
-            }
-
-            if (data.type == "cascade_2") {
-                cascade2Element.innerHTML = data.value;
-            }
-            
-            if (data.type == "cascade_3") {
-                cascade3Element.innerHTML = data.value;
-            }
-
-            if (data.type == "cascade_shadow_1") {
-                cascade1ShadowElement.innerHTML = data.value;
-            }
-
-            if (data.type == "cascade_shadow_2") {
-                cascade2ShadowElement.innerHTML = data.value;
-            }
-            
-            if (data.type == "cascade_shadow_3") {
-                cascade3ShadowElement.innerHTML = data.value;
-            }
         };
         ws.onclose = function(){
             console.log('closed!');
