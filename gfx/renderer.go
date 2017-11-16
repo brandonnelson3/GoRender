@@ -272,6 +272,7 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
 	renderer.colorFragmentShader.ZNear.Set(Window.nearPlane)
 	renderer.colorFragmentShader.ZFar.Set(Window.farPlane)
+	renderer.colorFragmentShader.ShadowMapSize.Set(shadowMapSize)
 	renderer.colorFragmentShader.AmbientLightColor.Set(ambientLightColor)
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())

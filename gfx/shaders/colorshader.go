@@ -90,6 +90,7 @@ uniform int renderMode;
 uniform uint numTilesX;
 uniform float zNear;
 uniform float zFar;
+uniform float shadowMapSize;
 uniform vec3 ambientLightColor;
 uniform sampler2D diffuse;
 uniform sampler2D shadowMap1;
@@ -122,7 +123,7 @@ vec3 saturate(vec3 v) {
 
 float getShadowFactor(int index, vec3 projCoords)
 {		
-	float texelSize = 1.0 / 4096.0;
+	float texelSize = 1.0 / shadowMapSize;
 	float currentDepth = projCoords.z;
 	float shadowFactor = 1.0f;
 	for (int i=-1; i<=1; i++){
@@ -317,6 +318,7 @@ type ColorFragmentShader struct {
 	NumTilesX         *uniforms.UInt
 	ZNear             *uniforms.Float
 	ZFar              *uniforms.Float
+	ShadowMapSize     *uniforms.Float
 	AmbientLightColor *uniforms.Vector3
 	Diffuse           *uniforms.Sampler2D
 
@@ -366,6 +368,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 	numTilesXLoc := gl.GetUniformLocation(program, gl.Str("numTilesX\x00"))
 	zNearLoc := gl.GetUniformLocation(program, gl.Str("zNear\x00"))
 	zFarLoc := gl.GetUniformLocation(program, gl.Str("zFar\x00"))
+	shadowMapSizeLoc := gl.GetUniformLocation(program, gl.Str("shadowMapSize\x00"))
 	ambientLightColorLoc := gl.GetUniformLocation(program, gl.Str("ambientLightColor\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
@@ -383,6 +386,7 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		NumTilesX:                 uniforms.NewUInt(program, numTilesXLoc),
 		ZNear:                     uniforms.NewFloat(program, zNearLoc),
 		ZFar:                      uniforms.NewFloat(program, zFarLoc),
+		ShadowMapSize:             uniforms.NewFloat(program, shadowMapSizeLoc),
 		AmbientLightColor:         uniforms.NewVector3(program, ambientLightColorLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
 		LightBuffer:               buffers.NewBinding(0),
