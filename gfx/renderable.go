@@ -5,6 +5,7 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
+// RenderablePortion allows rendering of a part of a vbo.
 type RenderablePortion struct {
 	startIndex, numIndex int32
 	// TODO: This should be abstracted out to some form of "Material"

@@ -52,9 +52,6 @@ type r struct {
 	csmDepthMaps   [NumberOfCascades]uint32
 
 	depthMapFBO, depthMap uint32
-
-	// TODO fix this and do something much better...
-	diffuseTexture, sandTexture uint32
 }
 
 // InitRenderer instanciates the global Renderer instance.

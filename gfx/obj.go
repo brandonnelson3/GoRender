@@ -21,7 +21,8 @@ type group struct {
 	mat material
 }
 
-type object struct {
+// Object is a wrapper around the contents of a model file.
+type Object struct {
 	groups   []group
 	vertices []Vertex
 }
@@ -50,7 +51,8 @@ const (
 	mapKdFormat  = mapKdPrefix + "%s"
 )
 
-func (o *object) GetChunkedRenderable() *Renderable {
+// GetChunkedRenderable builds the renderable for this Object.
+func (o *Object) GetChunkedRenderable() *Renderable {
 	portions := []RenderablePortion{}
 	for _, g := range o.groups {
 		portions = append(portions, RenderablePortion{g.start, g.end - g.start, g.mat.diffuse})
@@ -58,12 +60,13 @@ func (o *object) GetChunkedRenderable() *Renderable {
 	return NewChunkedRenderable(o.vertices, portions)
 }
 
-func LoadObjFile(file string) (*object, error) {
+// LoadObjFile loads the provided .obj file.
+func LoadObjFile(file string) (*Object, error) {
 	r, err := loader.Load(file)
 	if err != nil {
 		return nil, err
 	}
-	result := object{}
+	result := Object{}
 	scanner := bufio.NewScanner(r)
 
 	var verts []mgl32.Vec3

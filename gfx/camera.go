@@ -181,12 +181,12 @@ func updateConsoleOnTimer() {
 	}
 }
 
-func Transform(p mgl32.Vec3, m mgl32.Mat4) mgl32.Vec3 {
+func transform(p mgl32.Vec3, m mgl32.Mat4) mgl32.Vec3 {
 	p1 := m.Mul4x1(p.Vec4(1))
 	return mgl32.Vec3{p1.X() / p1.W(), p1.Y() / p1.W(), p1.Z() / p1.W()}
 }
 
-func TransformTransposed(p mgl32.Vec3, m mgl32.Mat4) mgl32.Vec3 {
+func transformTransposed(p mgl32.Vec3, m mgl32.Mat4) mgl32.Vec3 {
 	p1 := m.Transpose().Mul4x1(p.Vec4(1))
 	return mgl32.Vec3{p1.X() / p1.W(), p1.Y() / p1.W(), p1.Z() / p1.W()}
 }
@@ -226,7 +226,7 @@ func (c *camera) Update(d float64) {
 			cascadeCornerVertices := [8]mgl32.Vec3{}
 			cascadeCenter := mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				cascadeCornerVertices[i] = TransformTransposed(v, transform)
+				cascadeCornerVertices[i] = transformTransposed(v, transform)
 				cascadeCenter = cascadeCenter.Add(cascadeCornerVertices[i])
 			}
 			cascadeCenter = cascadeCenter.Mul(.125)
@@ -253,7 +253,7 @@ func (c *camera) Update(d float64) {
 			// Shadow Frustum Vert Calculation
 			cascadeCornerVertices = [8]mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				cascadeCornerVertices[i] = TransformTransposed(v, transform)
+				cascadeCornerVertices[i] = transformTransposed(v, transform)
 			}
 
 			// Note this is using the second "value" of the lineIndices index.
