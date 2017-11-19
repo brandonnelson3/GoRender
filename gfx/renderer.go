@@ -60,7 +60,6 @@ func InitRenderer() {
 	gl.DepthFunc(gl.LESS)
 	gl.Enable(gl.MULTISAMPLE)
 	gl.Enable(gl.BLEND)
-	gl.Enable(gl.CULL_FACE)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.DepthMask(true)
 	gl.PointSize(8.0)
@@ -164,6 +163,20 @@ func InitRenderer() {
 			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
 				cfs.RenderMode.Set(int32(key - glfw.KeyF1))
 			}
+			switch key {
+			case glfw.KeyPageUp:
+				UpdateDirectionalLight(func(dL DirectionalLight) DirectionalLight {
+					m := mgl32.Rotate3DZ(.01)
+					dL.Direction = m.Mul3x1(dL.Direction)
+					return dL
+				})
+			case glfw.KeyPageDown:
+				UpdateDirectionalLight(func(dL DirectionalLight) DirectionalLight {
+					m := mgl32.Rotate3DZ(-.01)
+					dL.Direction = m.Mul3x1(dL.Direction)
+					return dL
+				})
+			}
 		}
 		pressedKeysThisFrame := m.Data2.([]glfw.Key)
 		for _, key := range pressedKeysThisFrame {
@@ -214,6 +227,8 @@ func getTotalNumTiles() uint32 {
 }
 
 func (renderer *r) Render(renderables []*Renderable) {
+	gl.Disable(gl.CULL_FACE)
+
 	// Step 1: Depth Pass for each cascade for shadowing.
 	gl.Viewport(0, 0, shadowMapSize, shadowMapSize)
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
@@ -257,6 +272,8 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.lightCullingShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
 	gl.UseProgram(0)
+
+	gl.Enable(gl.CULL_FACE)
 
 	// Step 4: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)

@@ -25,11 +25,23 @@ func InitDirectionalLights() {
 	directionalLight = DirectionalLight{
 		Color:      mgl32.Vec3{1, 1, 1},
 		Brightness: 1.0,
-		Direction:  mgl32.Vec3{.7, -1, .7}.Normalize(),
+		Direction:  mgl32.Vec3{1, -1, 0}.Normalize(),
 	}
 
 	// Prepare light buffer
 	gl.GenBuffers(1, &directionalLightBuffer)
+
+	// Bind light buffer
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, directionalLightBuffer)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(unsafe.Sizeof(directionalLight)), unsafe.Pointer(&directionalLight), gl.DYNAMIC_DRAW)
+
+	// Unbind for safety.
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
+}
+
+// UpdateDirectionalLight updates the global directional light by calling the provided function and applying the result of the function.
+func UpdateDirectionalLight(f func(dL DirectionalLight) DirectionalLight) {
+	directionalLight = f(directionalLight)
 
 	// Bind light buffer
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, directionalLightBuffer)
