@@ -73,7 +73,7 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *Ren
 
 // GetModelMatrix returns this renderable's final model transform matrix.
 func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
-	return r.Scale.Mul4(r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
+	return mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()).Mul4(r.Scale.Mul4(r.Rotation))
 }
 
 // Render bind's this renderable's VAO and draws.
