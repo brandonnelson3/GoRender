@@ -24,21 +24,30 @@ in vec2 uv;
 out gl_PerVertex
 {
 	vec4 gl_Position;	
+	vec2 uv;
 } vertex_out;
 
 void main() {
 	gl_Position = projection * view * model * vec4(vert, 1);
+	vertex_out.uv = uv;
 }` + "\x00"
 	depthShaderOriginalFragmentSourceFile = `depthshader.frag`
 	depthShaderFragSrc                    = `
 #version 450
 
+uniform sampler2D diffuse;
+
 in VERTEX_OUT
 {
 	vec4 gl_FragCoord;
+	vec2 uv;
 } fragment_in;
 
 void main() {
+	vec4 color = texture(diffuse, fragment_in.uv);
+	if (color.a != 1) {
+		discard;
+	} 
 }` + "\x00"
 )
 
@@ -121,6 +130,8 @@ func (s *DepthVertexShader) BindVertexAttributes() {
 // DepthFragmentShader represents a FragmentShader
 type DepthFragmentShader struct {
 	uint32
+
+	Diffuse *uniforms.Sampler2D
 }
 
 // NewDepthFragmentShader instantiates and initializes a DepthFragmentShader object.
@@ -160,10 +171,13 @@ func NewDepthFragmentShader() (*DepthFragmentShader, error) {
 		return nil, fmt.Errorf("failed to link %v: %v", depthShaderOriginalFragmentSourceFile, log)
 	}
 
+	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
+
 	gl.DeleteShader(shader)
 
 	return &DepthFragmentShader{
-		uint32: program,
+		uint32:  program,
+		Diffuse: uniforms.NewSampler2D(program, diffuseLoc),
 	}, nil
 }
 

@@ -1,23 +1,37 @@
 package gfx
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"image/draw"
 	_ "image/png" // Required for image/png to work..
+	"strings"
 
 	"github.com/brandonnelson3/GoRender/loader"
 	"github.com/go-gl/gl/v4.5-core/gl"
 )
 
-// NewFromPng builds a texture from the provided Png file.
-func NewFromPng(file string) (uint32, error) {
-	b, err := loader.Load(file)
+const (
+	pngExt = ".png"
+	jpgExt = ".jpg"
+	tgaExt = ".tga"
+)
+
+// LoadTexture loads the texture in the provided file, based on the file extension.
+func LoadTexture(file string) (uint32, error) {
+	if strings.HasSuffix(file, pngExt) {
+		return fromPng(file)
+	}
+	return 0, fmt.Errorf("Attempted to load texture from unsupported file type: %v", file)
+}
+
+// fromPng builds a texture from the provided Png file.
+func fromPng(file string) (uint32, error) {
+	r, err := loader.Load(file)
 	if err != nil {
 		return 0, err
 	}
-	img, _, err := image.Decode(bytes.NewReader(b))
+	img, _, err := image.Decode(r)
 	if err != nil {
 		return 0, err
 	}

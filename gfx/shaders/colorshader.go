@@ -99,7 +99,8 @@ uniform sampler2D shadowMap2;
 uniform sampler2D shadowMap3;
 uniform sampler2D shadowMap4;
 
-const float shadowBias = 0.0005f;
+// Portion of the depth to consider to prevent shadow acne. This is proportional to the depth, to prevent peter panning.
+const float shadowBias = 0.9997;
 
 in VERTEX_OUT
 {
@@ -127,8 +128,8 @@ float getShadowFactor(int index, vec3 projCoords)
 	float texelSize = 1.0 / shadowMapSize;
 	float currentDepth = projCoords.z;
 	float shadowFactor = 1.0f;
-	for (int i=-1; i<=1; i++){
-		for (int j=-1; j<=1; j++){
+	for (int i=-1; i<=1; i++) {
+		for (int j=-1; j<=1; j++) {
 			float shadowMapDepth = 0.0f;
 			if(index == 0) {
 				shadowMapDepth = texture(shadowMap1, projCoords.xy + vec2(i,j) * texelSize).x;
@@ -138,9 +139,8 @@ float getShadowFactor(int index, vec3 projCoords)
 				shadowMapDepth = texture(shadowMap3, projCoords.xy + vec2(i,j) * texelSize).x;
 			} else {
 				shadowMapDepth = texture(shadowMap4, projCoords.xy + vec2(i,j) * texelSize).x;
-			}
-			
-			if (linearize(currentDepth-shadowBias) > linearize(shadowMapDepth)) {
+			}			
+			if (linearize(currentDepth*shadowBias) > linearize(shadowMapDepth)) {
 				shadowFactor -= 0.1f;
 			}
 		}
@@ -206,7 +206,7 @@ void main() {
 		float shadowFactor = 1.0f;		
 		if (shadowIndex != 4) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
-		} 
+		}
 		
 		outputColor = texture(diffuse, fragment_in.uv) * vec4(shadowIndexColor, 1.0) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
 	} else if (renderMode == 1) {

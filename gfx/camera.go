@@ -240,22 +240,8 @@ func (c *camera) Update(d float64) {
 				}
 			}
 			vertices = append(vertices, LineVertex{cascadeCenter, cascadeColors[j]})
-
-			radius := cascadeCornerVertices[7].Sub(cascadeCenter).Len()
-
-			texelsPerUnit := shadowMapSize / radius * 2.0
-			scalarMatrix := mgl32.Scale3D(texelsPerUnit, texelsPerUnit, texelsPerUnit)
-			lookAt := mgl32.LookAtV(mgl32.Vec3{0, 0, 0}, GetDirectionalLightDirection(), mgl32.Vec3{0, 1, 0})
-
-			lookAt = scalarMatrix.Mul4(lookAt)
-			lookAtInv := lookAt.Inv()
-
-			cascadeCenter = Transform(cascadeCenter, lookAt)
-			cascadeCenter = mgl32.Vec3{float32(math.Floor(float64(cascadeCenter.X()))), float32(math.Floor(float64(cascadeCenter.Y()))), cascadeCenter.Z()}
-			cascadeCenter = Transform(cascadeCenter, lookAtInv)
-
+			radius := float32(math.Ceil(float64(cascadeCornerVertices[7].Sub(cascadeCenter).Len())))
 			eye := cascadeCenter.Sub(GetDirectionalLightDirection())
-
 			vertices = append(vertices, LineVertex{eye, yellowColor})
 
 			lightViewMatrix := mgl32.LookAtV(eye, cascadeCenter, mgl32.Vec3{0, 1, 0})

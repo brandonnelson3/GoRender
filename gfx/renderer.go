@@ -62,9 +62,13 @@ func InitRenderer() {
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LESS)
 	gl.Enable(gl.MULTISAMPLE)
+	gl.Enable(gl.BLEND)
+	gl.Enable(gl.CULL_FACE)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 	gl.DepthMask(true)
 	gl.PointSize(8.0)
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+	gl.CullFace(gl.BACK)
 
 	lvs, err := shaders.NewLineVertexShader()
 	if err != nil {
@@ -142,7 +146,7 @@ func InitRenderer() {
 
 	for _, m := range csmDepthMaps {
 		gl.BindTexture(gl.TEXTURE_2D, m)
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, shadowMapSize, shadowMapSize, 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, shadowMapSize, shadowMapSize, 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_BORDER)
@@ -179,17 +183,6 @@ func InitRenderer() {
 		}
 	})
 
-	// TODO this should not be in renderer... probably should have some asset loading manager instead.
-	diffuseTexture, err := NewFromPng("assets/crate1_diffuse.png")
-	if err != nil {
-		panic(err)
-	}
-
-	sandTexture, err := NewFromPng("assets/sand.png")
-	if err != nil {
-		panic(err)
-	}
-
 	Renderer = r{
 		lineShaderPipeline:  lsp,
 		lineVertexShader:    lvs,
@@ -205,9 +198,6 @@ func InitRenderer() {
 		depthMap:            depthMap,
 		csmDepthMapFBO:      csmDepthMapFBO,
 		csmDepthMaps:        csmDepthMaps,
-		// TODO remove these...
-		diffuseTexture: diffuseTexture,
-		sandTexture:    sandTexture,
 	}
 }
 
@@ -238,7 +228,10 @@ func (renderer *r) Render(renderables []*Renderable) {
 		renderer.depthVertexShader.Projection.Set(FirstPerson.shadowMatrices[i])
 		for _, renderable := range renderables {
 			renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-			renderable.Render()
+			renderable.Render(func(portion RenderablePortion) {
+				renderer.depthFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
+				renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
+			})
 		}
 	}
 
@@ -250,8 +243,10 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.depthVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.depthVertexShader.Projection.Set(Window.GetProjection())
 	for _, renderable := range renderables {
-		renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-		renderable.Render()
+		renderable.Render(func(portion RenderablePortion) {
+			renderer.depthFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
+			renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
+		})
 	}
 
 	// Step 3: Light culling
@@ -282,14 +277,15 @@ func (renderer *r) Render(renderables []*Renderable) {
 	renderer.colorFragmentShader.CascadeDepthLimits.Set(&ShadowSplits[0], NumberOfCascades+1)
 	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
-	renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, renderer.diffuseTexture)
 	renderer.colorFragmentShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])
 	renderer.colorFragmentShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
 	renderer.colorFragmentShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
 	renderer.colorFragmentShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	for _, renderable := range renderables {
-		renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
-		renderable.Render()
+		renderable.Render(func(portion RenderablePortion) {
+			renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
+			renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
+		})
 	}
 
 	if ActiveCamera == ThirdPerson {

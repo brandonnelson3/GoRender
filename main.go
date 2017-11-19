@@ -5,7 +5,6 @@ import (
 	"runtime"
 
 	"github.com/brandonnelson3/GoRender/console"
-
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
 
@@ -53,18 +52,19 @@ func main() {
 	gfx.InitDirectionalLights()
 	gfx.InitPip()
 
-	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices)}
-	for x := 0; x < 2; x++ {
-		for y := 0; y < 2; y++ {
-			for z := 0; z < 2; z++ {
-				r := gfx.NewRenderable(gfx.CubeVertices)
-				r.Rotation = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
-				r.Scale = &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}
-				r.Position = &mgl32.Vec3{float32(10 * x), float32(10 * y), float32(10 * z)}
-				renderables = append(renderables, r)
-			}
-		}
+	obj, err := gfx.LoadObjFile("assets/Tree.obj")
+	if err != nil {
+		panic(err)
 	}
+	objRenderable := obj.GetChunkedRenderable()
+	objRenderable.Scale = mgl32.Scale3D(10, 10, 10)
+
+	diffuseTexture, err := gfx.LoadTexture("assets/crate1_diffuse.png")
+	if err != nil {
+		panic(err)
+	}
+
+	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices, diffuseTexture), objRenderable}
 
 	for !gfx.Window.ShouldClose() {
 		StartOfFrame()

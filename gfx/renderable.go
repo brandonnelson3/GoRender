@@ -5,19 +5,25 @@ import (
 	"github.com/go-gl/mathgl/mgl32"
 )
 
-// Renderable is a object wrapping around something that is renderable. This struct contains all of the settings and elements needed to render something.
+type RenderablePortion struct {
+	startIndex, numIndex int32
+	// TODO: This should be abstracted out to some form of "Material"
+	diffuse uint32
+}
+
+// Renderable is a object wrapping around something that is renderable.
 type Renderable struct {
 	vao, vbo uint32
 
-	Position        *mgl32.Vec3
-	Rotation, Scale *mgl32.Mat4
+	Position        mgl32.Vec3
+	Rotation, Scale mgl32.Mat4
 
 	renderStyle uint32
-	vertCount   int32
+	portions    []RenderablePortion
 }
 
 // NewRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
-func NewRenderable(verticies []Vertex) *Renderable {
+func NewRenderable(verticies []Vertex, diffuse uint32) *Renderable {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
@@ -32,33 +38,60 @@ func NewRenderable(verticies []Vertex) *Renderable {
 	return &Renderable{
 		vao:         vao,
 		vbo:         vbo,
-		Position:    &mgl32.Vec3{0, 0, 0},
-		Rotation:    &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
-		Scale:       &mgl32.Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+		Position:    mgl32.Vec3{},
+		Rotation:    mgl32.Ident4(),
+		Scale:       mgl32.Ident4(),
 		renderStyle: gl.TRIANGLES,
-		vertCount:   int32(len(verticies)),
+		portions:    []RenderablePortion{{0, int32(len(verticies)), diffuse}},
+	}
+}
+
+// NewChunkedRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
+func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *Renderable {
+	var vao uint32
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
+
+	var vbo uint32
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*8*4, gl.Ptr(verticies), gl.STATIC_DRAW)
+
+	Renderer.colorVertexShader.BindVertexAttributes()
+
+	return &Renderable{
+		vao:         vao,
+		vbo:         vbo,
+		Position:    mgl32.Vec3{},
+		Rotation:    mgl32.Ident4(),
+		Scale:       mgl32.Ident4(),
+		renderStyle: gl.TRIANGLES,
+		portions:    portions,
 	}
 }
 
 // GetModelMatrix returns this renderable's final model transform matrix.
 func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
-	return r.Scale.Mul4(*r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
+	return r.Scale.Mul4(r.Rotation).Mul4(mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()))
 }
 
 // Render bind's this renderable's VAO and draws.
-func (r *Renderable) Render() {
+func (r *Renderable) Render(f func(RenderablePortion)) {
 	gl.BindVertexArray(r.vao)
-	gl.DrawArrays(r.renderStyle, 0, r.vertCount)
+	for _, p := range r.portions {
+		f(p)
+		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
+	}
 }
 
 // PlaneVertices is the vertex list for a Plane.
 var PlaneVertices = []Vertex{
 	{mgl32.Vec3{-1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 0}},
-	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
-	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
-	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
+	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
+	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
+	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
 	{mgl32.Vec3{1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 50}},
-	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
+	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
 }
 
 // CubeVertices is the vertex list for a Cube.
