@@ -161,11 +161,12 @@ void main() {
 	// TODO 1024 should be somewhere constant.
 	uint offset = index * 1024;
 	
-	if (renderMode == 0 || renderMode == 5) {
+	if (renderMode == 0 || renderMode == 5) {		
 		vec4 diffuseColor = texture(diffuse, fragment_in.uv);
 		if (diffuseColor.a != 1) {
 			discard;
 		} 
+		
 		vec3 pointLightColor = vec3(0, 0, 0);
 		uint i=0;
 		for (i=0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
@@ -214,9 +215,8 @@ void main() {
 		float shadowFactor = 1.0f;		
 		if (shadowIndex != 4) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
-		}
-		
-		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
+		}		
+		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(directionalLightColor*shadowFactor, 1.0) + diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(pointLightColor, 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}
