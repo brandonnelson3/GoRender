@@ -19,7 +19,7 @@ const (
 	windowHeight = 1080
 	windowFOV    = 45.0
 	windowNear   = .1
-	windowFar    = 1000
+	windowFar    = 10000
 )
 
 func init() {
@@ -64,16 +64,23 @@ func main() {
 		panic(err)
 	}
 
+	sky, err := gfx.NewSky()
+	if err != nil {
+		panic(err)
+	}
+
 	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices, diffuseTexture), objRenderable}
 
 	for !gfx.Window.ShouldClose() {
 		StartOfFrame()
 
 		input.Update()
+		sky.Update()
+
 		gfx.FirstPerson.Update(GetPreviousFrameLength())
 		gfx.ThirdPerson.Update(GetPreviousFrameLength())
 
-		gfx.Renderer.Render(renderables)
+		gfx.Renderer.Render(sky, renderables)
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()

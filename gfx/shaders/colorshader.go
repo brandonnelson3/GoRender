@@ -123,6 +123,10 @@ vec3 saturate(vec3 v) {
 	return vec3(clamp(v.x, 0.0, 1.0), clamp(v.y, 0.0, 1.0), clamp(v.z, 0.0, 1.0));
 }
 
+float saturatef(float f) {
+	return clamp(f, 0.0, 1.0);
+}
+
 float getShadowFactor(int index, vec3 projCoords)
 {		
 	float texelSize = 1.0 / shadowMapSize;
@@ -185,16 +189,16 @@ void main() {
 
 		int shadowIndex = 4;
 		vec3 shadowIndexColor = vec3(1, 1, 1);
-		if (depthTest < cascadeDepthLimits[1]) {			
+		if ((saturatef(shadowCoords[0].x) == shadowCoords[0].x) && (saturatef(shadowCoords[0].y) == shadowCoords[0].y) && depthTest < cascadeDepthLimits[1]) {			
 			shadowIndex = 0;
 			shadowIndexColor = vec3(1, .5, .5);
-		} else if(depthTest < cascadeDepthLimits[2]) {
+		} else if((saturatef(shadowCoords[1].x) == shadowCoords[1].x) && (saturatef(shadowCoords[1].y) == shadowCoords[1].y) && depthTest < cascadeDepthLimits[2]) {
 			shadowIndex = 1;
 			shadowIndexColor = vec3(.5, 1, .5);
-		} else if(depthTest < cascadeDepthLimits[3]) {
+		} else if((saturatef(shadowCoords[2].x) == shadowCoords[2].x) && (saturatef(shadowCoords[2].y) == shadowCoords[2].y) && depthTest < cascadeDepthLimits[3]) {
 			shadowIndex = 2;
 			shadowIndexColor = vec3(.5, .5, 1);
-		} else {
+		} else if((saturatef(shadowCoords[3].x) == shadowCoords[3].x) && (saturatef(shadowCoords[3].y) == shadowCoords[3].y) && depthTest < cascadeDepthLimits[4]){
 			shadowIndex = 3;
 			shadowIndexColor = vec3(1, 1, .5);
 		}

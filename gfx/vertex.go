@@ -8,6 +8,11 @@ type Vertex struct {
 	UV         mgl32.Vec2
 }
 
+// SkyVertex is a Vertex for the sky.
+type SkyVertex struct {
+	Vert mgl32.Vec2
+}
+
 // LineVertex is a Vertex.
 type LineVertex struct {
 	Vert, Color mgl32.Vec3

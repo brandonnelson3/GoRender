@@ -48,11 +48,11 @@ func InitPip() {
 	botRight := mgl32.Vec2{float32(Window.Width - padding), float32(Window.Height - padding)}
 	planeVertices := []PipVertex{
 		{topLeft, mgl32.Vec2{0, 1}},
+		{botRight, mgl32.Vec2{1, 0}},
 		{topRight, mgl32.Vec2{1, 1}},
-		{botRight, mgl32.Vec2{1, 0}},
 		{topLeft, mgl32.Vec2{0, 1}},
-		{botRight, mgl32.Vec2{1, 0}},
 		{botLeft, mgl32.Vec2{0, 0}},
+		{botRight, mgl32.Vec2{1, 0}},
 	}
 	gl.GenVertexArrays(1, &planeSquareVao)
 	gl.BindVertexArray(planeSquareVao)
@@ -66,9 +66,9 @@ func InitPip() {
 		pressedKeys := m.Data1.([]glfw.Key)
 		for _, key := range pressedKeys {
 			switch key {
-			case glfw.KeyPageUp:
+			case glfw.KeyHome:
 				enabled = true
-			case glfw.KeyPageDown:
+			case glfw.KeyEnd:
 				enabled = false
 			}
 		}

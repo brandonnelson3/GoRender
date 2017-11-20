@@ -87,12 +87,12 @@ func (r *Renderable) Render(f func(RenderablePortion)) {
 
 // PlaneVertices is the vertex list for a Plane.
 var PlaneVertices = []Vertex{
-	{mgl32.Vec3{-1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 0}},
-	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
-	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
-	{mgl32.Vec3{-1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 50}},
-	{mgl32.Vec3{1000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 50}},
-	{mgl32.Vec3{1000.0, 0, -1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{50, 0}},
+	{mgl32.Vec3{-10000.0, 0, -10000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 0}},
+	{mgl32.Vec3{-10000.0, 0, 10000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 500}},
+	{mgl32.Vec3{10000.0, 0, -10000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{500, 0}},
+	{mgl32.Vec3{-10000.0, 0, 10000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{0, 500}},
+	{mgl32.Vec3{10000.0, 0, 1000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{500, 500}},
+	{mgl32.Vec3{10000.0, 0, -10000.0}, mgl32.Vec3{0, 1.0, 0}, mgl32.Vec2{500, 0}},
 }
 
 // CubeVertices is the vertex list for a Cube.

@@ -226,7 +226,13 @@ func getTotalNumTiles() uint32 {
 	return getNumTilesX() * getNumTilesY()
 }
 
-func (renderer *r) Render(renderables []*Renderable) {
+func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
+	UpdateDirectionalLight(func(dL DirectionalLight) DirectionalLight {
+		m := mgl32.Rotate3DZ(.0001)
+		dL.Direction = m.Mul3x1(dL.Direction)
+		return dL
+	})
+
 	gl.Disable(gl.CULL_FACE)
 
 	// Step 1: Depth Pass for each cascade for shadowing.
@@ -273,12 +279,13 @@ func (renderer *r) Render(renderables []*Renderable) {
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
 	gl.UseProgram(0)
 
-	gl.Enable(gl.CULL_FACE)
+	//gl.Enable(gl.CULL_FACE)
 
 	// Step 4: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-	gl.BindProgramPipeline(renderer.colorShaderPipeline)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	sky.Render()
+	gl.BindProgramPipeline(renderer.colorShaderPipeline)
 	renderer.colorVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.colorVertexShader.Projection.Set(Window.GetProjection())
 	renderer.colorVertexShader.LightViewProjs.Set(&FirstPerson.shadowMatrices[0][0], NumberOfCascades)
