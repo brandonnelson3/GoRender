@@ -16,7 +16,7 @@ const (
 	// tileSize is the size in pixels of a tile for this renderer.
 	tileSize = 16
 	// shadowMapSize is the size of the square depth buffers used for CSM.
-	shadowMapSize = 4096
+	shadowMapSize = 2048
 	// NumberOfCascades is the number of shadow cascades being used.
 	NumberOfCascades = 4
 )
@@ -253,6 +253,8 @@ func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
 		}
 	}
 
+	gl.Enable(gl.CULL_FACE)
+
 	// Step 2: Depth Pass for pointlight culling
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.BindProgramPipeline(renderer.depthShaderPipeline)
@@ -278,8 +280,6 @@ func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
 	renderer.lightCullingShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
 	gl.UseProgram(0)
-
-	//gl.Enable(gl.CULL_FACE)
 
 	// Step 4: Normal pass
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)

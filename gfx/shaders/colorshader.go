@@ -100,7 +100,7 @@ uniform sampler2D shadowMap3;
 uniform sampler2D shadowMap4;
 
 // Portion of the depth to consider to prevent shadow acne. This is proportional to the depth, to prevent peter panning.
-const float shadowBias = 0.9997;
+const float shadowBias = 0.9995;
 
 in VERTEX_OUT
 {
@@ -162,6 +162,10 @@ void main() {
 	uint offset = index * 1024;
 	
 	if (renderMode == 0 || renderMode == 5) {
+		vec4 diffuseColor = texture(diffuse, fragment_in.uv);
+		if (diffuseColor.a != 1) {
+			discard;
+		} 
 		vec3 pointLightColor = vec3(0, 0, 0);
 		uint i=0;
 		for (i=0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
@@ -212,7 +216,7 @@ void main() {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
 		}
 		
-		outputColor = texture(diffuse, fragment_in.uv) * vec4(shadowIndexColor, 1.0) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
+		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(saturate(pointLightColor + directionalLightColor*shadowFactor + ambientLightColor), 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}

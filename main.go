@@ -57,7 +57,7 @@ func main() {
 		panic(err)
 	}
 	objRenderable := obj.GetChunkedRenderable()
-	objRenderable.Scale = mgl32.Scale3D(10, 10, 10)
+	objRenderable.Scale = mgl32.Scale3D(20, 20, 20)
 
 	diffuseTexture, err := gfx.LoadTexture("assets/crate1_diffuse.png")
 	if err != nil {
@@ -69,7 +69,17 @@ func main() {
 		panic(err)
 	}
 
-	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices, diffuseTexture), objRenderable}
+	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices, diffuseTexture)}
+
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			r := objRenderable.Copy()
+
+			r.Position = mgl32.Vec3{float32(x * 60), 0.0, float32(z * 60)}
+
+			renderables = append(renderables, r)
+		}
+	}
 
 	for !gfx.Window.ShouldClose() {
 		StartOfFrame()
