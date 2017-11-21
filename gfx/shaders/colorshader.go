@@ -212,10 +212,15 @@ void main() {
 			shadowIndexColor = vec3(1, 1, 1);
 		}
 		
-		float shadowFactor = 1.0f;		
+		float shadowFactor = 1.0f;	
 		if (shadowIndex != 4) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
 		}		
+		float sunHeight = dot(directionalLight.direction * -1, vec3(0, 1, 0));
+		if (sunHeight < 0) {
+			shadowFactor = 0.0;
+		}	
+
 		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(directionalLightColor*shadowFactor, 1.0) + diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(pointLightColor, 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
