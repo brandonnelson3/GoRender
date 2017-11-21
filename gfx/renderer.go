@@ -226,7 +226,7 @@ func getTotalNumTiles() uint32 {
 	return getNumTilesX() * getNumTilesY()
 }
 
-func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
+func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	UpdateDirectionalLight(func(dL DirectionalLight) DirectionalLight {
 		m := mgl32.Rotate3DZ(.0001)
 		dL.Direction = m.Mul3x1(dL.Direction)
@@ -245,11 +245,7 @@ func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 		renderer.depthVertexShader.Projection.Set(FirstPerson.shadowMatrices[i])
 		for _, renderable := range renderables {
-			renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-			renderable.Render(func(portion RenderablePortion) {
-				renderer.depthFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
-				renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-			})
+			renderable.RenderDepth(renderer.depthVertexShader, renderer.depthFragmentShader)
 		}
 	}
 
@@ -263,10 +259,7 @@ func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
 	renderer.depthVertexShader.View.Set(ActiveCamera.GetView())
 	renderer.depthVertexShader.Projection.Set(Window.GetProjection())
 	for _, renderable := range renderables {
-		renderable.Render(func(portion RenderablePortion) {
-			renderer.depthFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
-			renderer.depthVertexShader.Model.Set(renderable.GetModelMatrix())
-		})
+		renderable.RenderDepth(renderer.depthVertexShader, renderer.depthFragmentShader)
 	}
 
 	// Step 3: Light culling
@@ -303,10 +296,7 @@ func (renderer *r) Render(sky *Sky, renderables []*Renderable) {
 	renderer.colorFragmentShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
 	renderer.colorFragmentShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	for _, renderable := range renderables {
-		renderable.Render(func(portion RenderablePortion) {
-			renderer.colorFragmentShader.Diffuse.Set(gl.TEXTURE0, 0, portion.diffuse)
-			renderer.colorVertexShader.Model.Set(renderable.GetModelMatrix())
-		})
+		renderable.Render(renderer.colorVertexShader, renderer.colorFragmentShader)
 	}
 
 	if ActiveCamera == ThirdPerson {

@@ -52,7 +52,7 @@ const (
 )
 
 // GetChunkedRenderable builds the renderable for this Object.
-func (o *Object) GetChunkedRenderable() *Renderable {
+func (o *Object) GetChunkedRenderable() *VAORenderable {
 	portions := []RenderablePortion{}
 	for _, g := range o.groups {
 		portions = append(portions, RenderablePortion{g.start, g.end - g.start, g.mat.diffuse})

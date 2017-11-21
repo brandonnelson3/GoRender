@@ -1,6 +1,7 @@
 package gfx
 
 import (
+	"github.com/brandonnelson3/GoRender/gfx/shaders"
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
 )
@@ -12,8 +13,13 @@ type RenderablePortion struct {
 	diffuse uint32
 }
 
-// Renderable is a object wrapping around something that is renderable.
-type Renderable struct {
+type Renderable interface {
+	Render(*shaders.ColorVertexShader, *shaders.ColorFragmentShader)
+	RenderDepth(*shaders.DepthVertexShader, *shaders.DepthFragmentShader)
+}
+
+// VAORenderable is a object wrapping around something that is renderable on top of a vao.
+type VAORenderable struct {
 	vao, vbo uint32
 
 	Position        mgl32.Vec3
@@ -23,8 +29,8 @@ type Renderable struct {
 	portions    []RenderablePortion
 }
 
-// NewRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
-func NewRenderable(verticies []Vertex, diffuse uint32) *Renderable {
+// NewVAORenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
+func NewVAORenderable(verticies []Vertex, diffuse uint32) *VAORenderable {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
@@ -36,7 +42,7 @@ func NewRenderable(verticies []Vertex, diffuse uint32) *Renderable {
 
 	Renderer.colorVertexShader.BindVertexAttributes()
 
-	return &Renderable{
+	return &VAORenderable{
 		vao:         vao,
 		vbo:         vbo,
 		Position:    mgl32.Vec3{},
@@ -48,7 +54,7 @@ func NewRenderable(verticies []Vertex, diffuse uint32) *Renderable {
 }
 
 // NewChunkedRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
-func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *Renderable {
+func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *VAORenderable {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
@@ -60,7 +66,7 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *Ren
 
 	Renderer.colorVertexShader.BindVertexAttributes()
 
-	return &Renderable{
+	return &VAORenderable{
 		vao:         vao,
 		vbo:         vbo,
 		Position:    mgl32.Vec3{},
@@ -71,21 +77,32 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *Ren
 	}
 }
 
-// GetModelMatrix returns this renderable's final model transform matrix.
-func (r *Renderable) GetModelMatrix() mgl32.Mat4 {
+// getModelMatrix returns this renderable's final model transform matrix.
+func (r *VAORenderable) getModelMatrix() mgl32.Mat4 {
 	return mgl32.Translate3D(r.Position.X(), r.Position.Y(), r.Position.Z()).Mul4(r.Scale.Mul4(r.Rotation))
 }
 
 // Render bind's this renderable's VAO and draws.
-func (r *Renderable) Render(f func(RenderablePortion)) {
+func (r *VAORenderable) Render(vertexShader *shaders.ColorVertexShader, fragmentShader *shaders.ColorFragmentShader) {
 	gl.BindVertexArray(r.vao)
+	vertexShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
-		f(p)
+		fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
 		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
 	}
 }
 
-func (r *Renderable) Copy() *Renderable {
+// Render bind's this renderable's VAO and draws for depth.
+func (r *VAORenderable) RenderDepth(vertexShader *shaders.DepthVertexShader, fragmentShader *shaders.DepthFragmentShader) {
+	gl.BindVertexArray(r.vao)
+	vertexShader.Model.Set(r.getModelMatrix())
+	for _, p := range r.portions {
+		fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
+		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
+	}
+}
+
+func (r *VAORenderable) Copy() *VAORenderable {
 	temp := *r
 	return &temp
 }

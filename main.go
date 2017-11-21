@@ -69,7 +69,7 @@ func main() {
 		panic(err)
 	}
 
-	renderables := []*gfx.Renderable{gfx.NewRenderable(gfx.PlaneVertices, diffuseTexture)}
+	renderables := []gfx.Renderable{gfx.NewVAORenderable(gfx.PlaneVertices, diffuseTexture)}
 
 	for x := -2; x <= 2; x++ {
 		for z := -2; z <= 2; z++ {
