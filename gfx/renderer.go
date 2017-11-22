@@ -30,7 +30,7 @@ var (
 	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
-	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 20, 70, 300, 1000}
+	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 10, 30, 150, 400}
 )
 
 type r struct {
@@ -226,13 +226,13 @@ func getTotalNumTiles() uint32 {
 	return getNumTilesX() * getNumTilesY()
 }
 
-func (renderer *r) Render(sky *Sky, renderables []Renderable) {
-	UpdateDirectionalLight(func(dL DirectionalLight) DirectionalLight {
-		m := mgl32.Rotate3DZ(.0001)
-		dL.Direction = m.Mul3x1(dL.Direction)
-		return dL
-	})
+func (renderer *r) Update(updateables []Updateable) {
+	for _, u := range updateables {
+		u.Update(renderer.depthVertexShader, renderer.colorVertexShader)
+	}
+}
 
+func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Disable(gl.CULL_FACE)
 
 	// Step 1: Depth Pass for each cascade for shadowing.

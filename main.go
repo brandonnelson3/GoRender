@@ -7,6 +7,7 @@ import (
 	"github.com/brandonnelson3/GoRender/console"
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
+	"github.com/brandonnelson3/GoRender/terrain"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -57,26 +58,25 @@ func main() {
 		panic(err)
 	}
 	objRenderable := obj.GetChunkedRenderable()
-	objRenderable.Scale = mgl32.Scale3D(20, 20, 20)
-
-	diffuseTexture, err := gfx.LoadTexture("assets/crate1_diffuse.png")
-	if err != nil {
-		panic(err)
-	}
+	objRenderable.Scale = mgl32.Scale3D(2, 2, 2)
 
 	sky, err := gfx.NewSky()
 	if err != nil {
 		panic(err)
 	}
 
-	renderables := []gfx.Renderable{gfx.NewVAORenderable(gfx.PlaneVertices, diffuseTexture)}
+	terr := terrain.NewTerrain()
 
-	for x := -2; x <= 2; x++ {
-		for z := -2; z <= 2; z++ {
+	renderables := []gfx.Renderable{terr}
+	updateables := []gfx.Updateable{terr}
+
+	for x := 0; x <= 4; x++ {
+		for z := 0; z <= 4; z++ {
 			r := objRenderable.Copy()
 
-			r.Position = mgl32.Vec3{float32(x * 60), 0.0, float32(z * 60)}
+			height := terr.GetHeight(float32(x*8+5), float32(z*8+5))
 
+			r.Position = mgl32.Vec3{float32(x * 8+5), height, float32(z * 8+5)}
 			renderables = append(renderables, r)
 		}
 	}
@@ -91,6 +91,7 @@ func main() {
 		gfx.ThirdPerson.Update(GetPreviousFrameLength())
 
 		gfx.Renderer.Render(sky, renderables)
+		gfx.Renderer.Update(updateables)
 
 		gfx.Window.SwapBuffers()
 		glfw.PollEvents()
