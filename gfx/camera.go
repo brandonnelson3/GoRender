@@ -221,12 +221,12 @@ func (c *camera) Update(d float64) {
 
 		vertices := []LineVertex{}
 		for j := 0; j < NumberOfCascades; j++ {
-			transform := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv()
+			lightViewProjection := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv()
 
 			cascadeCornerVertices := [8]mgl32.Vec3{}
 			cascadeCenter := mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				cascadeCornerVertices[i] = transformTransposed(v, transform)
+				cascadeCornerVertices[i] = transformTransposed(v, lightViewProjection)
 				cascadeCenter = cascadeCenter.Add(cascadeCornerVertices[i])
 			}
 			cascadeCenter = cascadeCenter.Mul(.125)
@@ -240,7 +240,20 @@ func (c *camera) Update(d float64) {
 				}
 			}
 			vertices = append(vertices, LineVertex{cascadeCenter, cascadeColors[j]})
-			radius := float32(math.Ceil(float64(cascadeCornerVertices[7].Sub(cascadeCenter).Len())))
+			radius := cascadeCornerVertices[0].Sub(cascadeCornerVertices[6]).Len() / 2.0
+			texelsPerUnit := float32(shadowMapSize) / (radius * 2.0)
+			scalar := mgl32.Scale3D(texelsPerUnit, texelsPerUnit, texelsPerUnit)
+			lookat := mgl32.LookAtV(mgl32.Vec3{0, 0, 0}, GetDirectionalLightDirection().Mul(-1), mgl32.Vec3{0, 1, 0}).Mul4(scalar)
+			lookatInv := lookat.Inv()
+
+			cascadeCenter = transform(cascadeCenter, lookat)
+			cascadeCenter = mgl32.Vec3{
+				float32(math.Floor(float64(cascadeCenter.X()))),
+				float32(math.Floor(float64(cascadeCenter.Y()))),
+				cascadeCenter.Z(),
+			}
+			cascadeCenter = transform(cascadeCenter, lookatInv)
+
 			eye := cascadeCenter.Sub(GetDirectionalLightDirection())
 			vertices = append(vertices, LineVertex{eye, yellowColor})
 
@@ -248,12 +261,12 @@ func (c *camera) Update(d float64) {
 			frustumOrthoMatrix := mgl32.Ortho(-radius, radius, -radius, radius, -6*radius, 6*radius)
 
 			c.shadowMatrices[j] = frustumOrthoMatrix.Mul4(lightViewMatrix)
-			transform = c.shadowMatrices[j].Transpose().Inv()
+			lightViewProjection = c.shadowMatrices[j].Transpose().Inv()
 
 			// Shadow Frustum Vert Calculation
 			cascadeCornerVertices = [8]mgl32.Vec3{}
 			for i, v := range cornerVertices {
-				cascadeCornerVertices[i] = transformTransposed(v, transform)
+				cascadeCornerVertices[i] = transformTransposed(v, lightViewProjection)
 			}
 
 			// Note this is using the second "value" of the lineIndices index.
@@ -266,10 +279,10 @@ func (c *camera) Update(d float64) {
 			}
 		}
 
-		transform := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
+		lightViewProjection := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
 		cascadeCornerVertices := [8]mgl32.Vec3{}
 		for i, v := range cornerVertices {
-			temp := transform.Mul4x1(v.Vec4(1))
+			temp := lightViewProjection.Mul4x1(v.Vec4(1))
 			cascadeCornerVertices[i] = mgl32.Vec3{temp.X() / temp.W(), temp.Y() / temp.W(), temp.Z() / temp.W()}
 		}
 		// Note this is using the second "value" of the lineIndices index.
