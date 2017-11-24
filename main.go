@@ -76,7 +76,7 @@ func main() {
 
 			height := terr.GetHeight(float32(x*8+5), float32(z*8+5))
 
-			r.Position = mgl32.Vec3{float32(x * 8+5), height, float32(z * 8+5)}
+			r.Position = mgl32.Vec3{float32(x*8 + 5), height, float32(z*8 + 5)}
 			renderables = append(renderables, r)
 		}
 	}

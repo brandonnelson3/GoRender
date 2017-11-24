@@ -189,6 +189,8 @@ func InitRenderer() {
 				UpdatePip(&csmDepthMaps[2], Window.GetNearFar(2))
 			case glfw.KeyKPDivide:
 				UpdatePip(&csmDepthMaps[3], Window.GetNearFar(3))
+			case glfw.KeyPrintScreen:
+				Screenshot()
 			}
 		}
 	})
