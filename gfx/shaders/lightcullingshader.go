@@ -173,7 +173,7 @@ void main() {
 
 // LightCullingShader represents a Light Culling Compute Shader
 type LightCullingShader struct {
-	uint32
+	Shader
 
 	DepthMap         *uniforms.Sampler2D
 	Projection, View *uniforms.Matrix4
@@ -228,7 +228,7 @@ func NewLightCullingShader() (*LightCullingShader, error) {
 	gl.DeleteShader(shader)
 
 	return &LightCullingShader{
-		uint32:                    program,
+		Shader:                    Shader{program},
 		DepthMap:                  uniforms.NewSampler2D(program, depthMapLoc),
 		Projection:                uniforms.NewMatrix4(program, projectionLoc),
 		View:                      uniforms.NewMatrix4(program, viewLoc),
@@ -237,9 +237,4 @@ func NewLightCullingShader() (*LightCullingShader, error) {
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),
 	}, nil
-}
-
-// Use binds this program to be used.
-func (s *LightCullingShader) Use() {
-	gl.UseProgram(s.uint32)
 }

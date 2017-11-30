@@ -224,7 +224,7 @@ void main() {
 
 // ColorShader is a Shader.
 type ColorShader struct {
-	uint32
+	Shader
 
 	Projection, View, Model *uniforms.Matrix4
 	LightViewProjs          *uniforms.Matrix4Array
@@ -314,7 +314,7 @@ func NewColorShader() (*ColorShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &ColorShader{
-		uint32:                    program,
+		Shader:                    Shader{program},
 		Projection:                uniforms.NewMatrix4(program, projectionLoc),
 		View:                      uniforms.NewMatrix4(program, viewLoc),
 		Model:                     uniforms.NewMatrix4(program, modelLoc),
@@ -335,14 +335,4 @@ func NewColorShader() (*ColorShader, error) {
 		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 		ShadowMap4:                uniforms.NewSampler2D(program, shadowMap4Loc),
 	}, nil
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *ColorShader) Program() uint32 {
-	return s.uint32
-}
-
-// Use binds this program to be used.
-func (s *ColorShader) Use() {
-	gl.UseProgram(s.uint32)
 }

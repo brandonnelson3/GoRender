@@ -45,7 +45,7 @@ void main() {
 
 // DepthShader is a Shader.
 type DepthShader struct {
-	uint32
+	Shader
 
 	Projection, View, Model *uniforms.Matrix4
 
@@ -109,20 +109,10 @@ func NewDepthShader() (*DepthShader, error) {
 	gl.DeleteShader(fragmentShader)
 
 	return &DepthShader{
-		uint32:     program,
+		Shader:     Shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		Model:      uniforms.NewMatrix4(program, modelLoc),
 		Diffuse:    uniforms.NewSampler2D(program, diffuseLoc),
 	}, nil
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *DepthShader) Program() uint32 {
-	return s.uint32
-}
-
-// Use binds this program to be used.
-func (s *DepthShader) Use() {
-	gl.UseProgram(s.uint32)
 }

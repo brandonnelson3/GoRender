@@ -182,7 +182,7 @@ void main() {
 
 // SkyShader is a Shader.
 type SkyShader struct {
-	uint32
+	Shader
 
 	Projection, View *uniforms.Matrix4
 
@@ -246,19 +246,9 @@ func NewSkyShader() (*SkyShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &SkyShader{
-		uint32:     program,
+		Shader:     Shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		DirectionalLightBuffer: buffers.NewBinding(2),
 	}, nil
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *SkyShader) Program() uint32 {
-	return s.uint32
-}
-
-// Use binds this program to be used.
-func (s *SkyShader) Use() {
-	gl.UseProgram(s.uint32)
 }

@@ -47,7 +47,7 @@ void main() {
 
 // PipShader is a Shader.
 type PipShader struct {
-	uint32
+	Shader
 
 	Projection *uniforms.Matrix4
 
@@ -113,19 +113,9 @@ func NewPipShader() (*PipShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &PipShader{
-		uint32:     program,
+		Shader:     Shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		DepthMap:   uniforms.NewSampler2D(program, depthMapLoc),
 		NearFar:    uniforms.NewVector2(program, nearFarLoc),
 	}, nil
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *PipShader) Program() uint32 {
-	return s.uint32
-}
-
-// Use binds this program to be used.
-func (s *PipShader) Use() {
-	gl.UseProgram(s.uint32)
 }

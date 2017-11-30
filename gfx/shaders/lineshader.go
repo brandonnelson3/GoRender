@@ -42,7 +42,7 @@ void main() {
 
 // LineShader is a Shader.
 type LineShader struct {
-	uint32
+	Shader
 
 	Projection, View *uniforms.Matrix4
 }
@@ -104,18 +104,8 @@ func NewLineShader() (*LineShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &LineShader{
-		uint32:     program,
+		Shader:     Shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 	}, nil
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *LineShader) Program() uint32 {
-	return s.uint32
-}
-
-// Use binds this program to be used.
-func (s *LineShader) Use() {
-	gl.UseProgram(s.uint32)
 }
