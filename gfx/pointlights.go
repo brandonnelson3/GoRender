@@ -38,10 +38,10 @@ type VisibleIndex struct {
 
 // InitPointLights sets up buffer space for light culling calculations and storage.
 func InitPointLights() {
-	AddPointLight(mgl32.Vec3{0, 12, 0}, mgl32.Vec3{1, 0, 0}, 1.0, 100.0)
-	AddPointLight(mgl32.Vec3{36, 12, 0}, mgl32.Vec3{0, 1, 0}, 1.0, 100.0)
-	AddPointLight(mgl32.Vec3{0, 12, 36}, mgl32.Vec3{0, 0, 1}, 1.0, 100.0)
-	AddPointLight(mgl32.Vec3{36, 12, 36}, mgl32.Vec3{1, 1, 0}, 1.0, 100.0)
+	AddPointLight(mgl32.Vec3{0, 12, 0}, mgl32.Vec3{1, 0, 0}, 1.0, 10.0)
+	AddPointLight(mgl32.Vec3{36, 12, 0}, mgl32.Vec3{0, 1, 0}, 1.0, 10.0)
+	AddPointLight(mgl32.Vec3{0, 12, 36}, mgl32.Vec3{0, 0, 1}, 1.0, 10.0)
+	AddPointLight(mgl32.Vec3{36, 12, 36}, mgl32.Vec3{1, 1, 0}, 1.0, 10.0)
 
 	// Prepare light buffers
 	gl.GenBuffers(1, &lightBuffer)

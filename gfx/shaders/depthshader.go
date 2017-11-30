@@ -21,15 +21,11 @@ in vec3 vert;
 in vec3 norm;
 in vec2 uv;
 
-out gl_PerVertex
-{
-	vec4 gl_Position;	
-	vec2 uv;
-} vertex_out;
+out vec2 uv_out;
 
 void main() {
 	gl_Position = projection * view * model * vec4(vert, 1);
-	vertex_out.uv = uv;
+	uv_out = uv;
 }` + "\x00"
 	depthShaderOriginalFragmentSourceFile = `depthshader.frag`
 	depthShaderFragSrc                    = `
@@ -37,138 +33,96 @@ void main() {
 
 uniform sampler2D diffuse;
 
-in VERTEX_OUT
-{
-	vec4 gl_FragCoord;
-	vec2 uv;
-} fragment_in;
+in vec2 uv_out;
 
 void main() {
-	vec4 color = texture(diffuse, fragment_in.uv);
+	vec4 color = texture(diffuse, uv_out);
 	if (color.a != 1) {
 		discard;
 	} 
 }` + "\x00"
 )
 
-// DepthVertexShader is a VertexShader.
-type DepthVertexShader struct {
+// DepthShader is a Shader.
+type DepthShader struct {
 	uint32
 
 	Projection, View, Model *uniforms.Matrix4
+
+	Diffuse *uniforms.Sampler2D
 }
 
-// NewDepthVertexShader instantiates and initializes a shader object.
-func NewDepthVertexShader() (*DepthVertexShader, error) {
+// NewDepthShader instantiates and initializes a shader object.
+func NewDepthShader() (*DepthShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.VERTEX_SHADER)
 
-	csources, free := gl.Strs(depthShaderVertSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// VertexShader
+	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
+	vertexSrc, freeVertexSrc := gl.Strs(depthShaderVertSrc)
+	gl.ShaderSource(vertexShader, 1, vertexSrc, nil)
+	freeVertexSrc()
+	gl.CompileShader(vertexShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(vertexShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
+		gl.GetShaderInfoLog(vertexShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", depthShaderOriginalVertexSourceFile, log)
 	}
+	gl.AttachShader(program, vertexShader)
 
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
+	// FragmentShader
+	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	fragmentSrc, freeFragmentSrc := gl.Strs(depthShaderFragSrc)
+	gl.ShaderSource(fragmentShader, 1, fragmentSrc, nil)
+	freeFragmentSrc()
+	gl.CompileShader(fragmentShader)
+	gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(fragmentShader, gl.INFO_LOG_LENGTH, &logLength)
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(fragmentShader, logLength, nil, gl.Str(log))
+		return nil, fmt.Errorf("failed to compile %v: %v", depthShaderOriginalFragmentSourceFile, log)
+	}
+	gl.AttachShader(program, fragmentShader)
+
+	// Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
 		return nil, fmt.Errorf("failed to link %v: %v", depthShaderOriginalVertexSourceFile, log)
 	}
 
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
 	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
+	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 
-	gl.DeleteShader(shader)
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
 
-	return &DepthVertexShader{
+	return &DepthShader{
 		uint32:     program,
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		Model:      uniforms.NewMatrix4(program, modelLoc),
+		Diffuse:    uniforms.NewSampler2D(program, diffuseLoc),
 	}, nil
 }
 
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *DepthVertexShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
+// Program returns the opengl program id of this vertex shader.
+func (s *DepthShader) Program() uint32 {
+	return s.uint32
 }
 
-// DepthFragmentShader represents a FragmentShader
-type DepthFragmentShader struct {
-	uint32
-
-	Diffuse *uniforms.Sampler2D
-}
-
-// NewDepthFragmentShader instantiates and initializes a DepthFragmentShader object.
-func NewDepthFragmentShader() (*DepthFragmentShader, error) {
-	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-
-	csources, free := gl.Strs(depthShaderFragSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to compile %v: %v", depthShaderOriginalFragmentSourceFile, log)
-	}
-
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
-	gl.LinkProgram(program)
-
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", depthShaderOriginalFragmentSourceFile, log)
-	}
-
-	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
-
-	gl.DeleteShader(shader)
-
-	return &DepthFragmentShader{
-		uint32:  program,
-		Diffuse: uniforms.NewSampler2D(program, diffuseLoc),
-	}, nil
-}
-
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *DepthFragmentShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.FRAGMENT_SHADER_BIT, s.uint32)
+// Use binds this program to be used.
+func (s *DepthShader) Use() {
+	gl.UseProgram(s.uint32)
 }

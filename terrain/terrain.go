@@ -23,7 +23,7 @@ type cell struct {
 	verts []gfx.Vertex
 }
 
-func (c *cell) Update(colorVertexShader *shaders.ColorVertexShader) {
+func (c *cell) Update(colorShader *shaders.ColorShader) {
 	if c.vao == 0 {
 		gl.GenVertexArrays(1, &c.vao)
 		gl.BindVertexArray(c.vao)
@@ -31,22 +31,22 @@ func (c *cell) Update(colorVertexShader *shaders.ColorVertexShader) {
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(c.verts)*8*4, gl.Ptr(c.verts), gl.STATIC_DRAW)
 
-		gfx.BindVertexAttributes(colorVertexShader.Program())
+		gfx.BindVertexAttributes(colorShader.Program())
 	}
 }
 
-func (c *cell) Render(vertexShader *shaders.ColorVertexShader, fragmentShader *shaders.ColorFragmentShader) {
+func (c *cell) Render(colorShader *shaders.ColorShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		vertexShader.Model.Set(mgl32.Ident4())
+		colorShader.Model.Set(mgl32.Ident4())
 		gl.DrawArrays(gl.TRIANGLES, 0, c.numVerts)
 	}
 }
 
-func (c *cell) RenderDepth(vertexShader *shaders.DepthVertexShader, fragmentShader *shaders.DepthFragmentShader) {
+func (c *cell) RenderDepth(depthShader *shaders.DepthShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		vertexShader.Model.Set(mgl32.Ident4())
+		depthShader.Model.Set(mgl32.Ident4())
 		gl.DrawArrays(gl.TRIANGLES, 0, c.numVerts)
 	}
 }
@@ -139,16 +139,16 @@ func (t *Terrain) GetHeight(x, z float32) float32 {
 	return float32((t.noise.Noise2D(float64(x)/10.0, float64(z)/10.0)+1)/2.0) * 4
 }
 
-func (t *Terrain) Update(colorVertexShader *shaders.ColorVertexShader) {
-	t.c.Update(colorVertexShader)
+func (t *Terrain) Update(colorShader *shaders.ColorShader) {
+	t.c.Update(colorShader)
 }
 
-func (t *Terrain) Render(vertexShader *shaders.ColorVertexShader, fragmentShader *shaders.ColorFragmentShader) {
-	fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
-	t.c.Render(vertexShader, fragmentShader)
+func (t *Terrain) Render(colorShader *shaders.ColorShader) {
+	colorShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
+	t.c.Render(colorShader)
 }
 
-func (t *Terrain) RenderDepth(vertexShader *shaders.DepthVertexShader, fragmentShader *shaders.DepthFragmentShader) {
-	fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
-	t.c.RenderDepth(vertexShader, fragmentShader)
+func (t *Terrain) RenderDepth(depthShader *shaders.DepthShader) {
+	depthShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
+	t.c.RenderDepth(depthShader)
 }

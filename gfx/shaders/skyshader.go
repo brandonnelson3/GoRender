@@ -20,15 +20,11 @@ uniform mat4 view;
 
 in vec3 vert;
 
-out gl_PerVertex
-{
-	vec4 gl_Position;
-	vec3 position;
-} vertex_out;
+out vec3 position;
 
 void main() {
 	gl_Position = projection * view * vec4(vert, 1);
-	vertex_out.position = vert;
+	position = vert;
 }` + "\x00"
 	skyShaderOriginalFragmentSourceFile = `skyshader.frag`
 	skyShaderFragSrc                    = `
@@ -47,11 +43,7 @@ layout(std430, binding = 2) readonly buffer DirectionalLightBuffer {
 	DirectionalLight data;
 } directionalLightBuffer;
 
-in VERTEX_OUT
-{
-	vec4 gl_FragCoord;
-	vec3 position;
-} fragment_in;
+in vec3 position;
 
 out vec4 outputColor;
 
@@ -167,7 +159,7 @@ void main() {
 	DirectionalLight directionalLight = directionalLightBuffer.data;
 	
 	vec3 color = atmosphere(
-        normalize(fragment_in.position),// normalized ray direction
+        normalize(position),// normalized ray direction
         vec3(0,6372e3,0),               // ray origin
         directionalLight.direction * -1,// position of the sun
         22.0,                           // intensity of the sun
@@ -188,129 +180,85 @@ void main() {
 ` + "\x00"
 )
 
-// SkyVertexShader is a VertexShader.
-type SkyVertexShader struct {
+// SkyShader is a Shader.
+type SkyShader struct {
 	uint32
 
 	Projection, View *uniforms.Matrix4
+
+	DirectionalLightBuffer *buffers.Binding
 }
 
-// NewSkyVertexShader instantiates and initializes a shader object.
-func NewSkyVertexShader() (*SkyVertexShader, error) {
+// NewSkyShader instantiates and initializes a shader object.
+func NewSkyShader() (*SkyShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.VERTEX_SHADER)
 
-	csources, free := gl.Strs(skyShaderVertSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// VertexShader
+	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
+	vertexSrc, freeVertexSrc := gl.Strs(skyShaderVertSrc)
+	gl.ShaderSource(vertexShader, 1, vertexSrc, nil)
+	freeVertexSrc()
+	gl.CompileShader(vertexShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(vertexShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
+		gl.GetShaderInfoLog(vertexShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", skyShaderOriginalFragmentSourceFile, log)
 	}
+	gl.AttachShader(program, vertexShader)
 
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
+	// FragmentShader
+	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	fragmentSrc, freeFragmentSrc := gl.Strs(skyShaderFragSrc)
+	gl.ShaderSource(fragmentShader, 1, fragmentSrc, nil)
+	freeFragmentSrc()
+	gl.CompileShader(fragmentShader)
+	gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(fragmentShader, gl.INFO_LOG_LENGTH, &logLength)
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(fragmentShader, logLength, nil, gl.Str(log))
+		return nil, fmt.Errorf("failed to compile %v: %v", skyShaderOriginalFragmentSourceFile, log)
+	}
+	gl.AttachShader(program, fragmentShader)
+
+	// Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
 		return nil, fmt.Errorf("failed to link %v: %v", skyShaderOriginalVertexSourceFile, log)
 	}
 
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
 
-	gl.DeleteShader(shader)
-
-	return &SkyVertexShader{
-		uint32:     program,
-		Projection: uniforms.NewMatrix4(program, projectionLoc),
-		View:       uniforms.NewMatrix4(program, viewLoc),
-	}, nil
-}
-
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *SkyVertexShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *SkyVertexShader) Program() uint32 {
-	return s.uint32
-}
-
-// SkyFragmentShader represents a SkyFragmentShader
-type SkyFragmentShader struct {
-	uint32
-
-	DirectionalLightBuffer *buffers.Binding
-}
-
-// NewSkyFragmentShader instantiates and initializes a SkyFragmentShader object.
-func NewSkyFragmentShader() (*SkyFragmentShader, error) {
-	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-
-	csources, free := gl.Strs(skyShaderFragSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to compile %v: %v", skyShaderOriginalFragmentSourceFile, log)
-	}
-
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
-	gl.LinkProgram(program)
-
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", skyShaderOriginalFragmentSourceFile, log)
-	}
-
-	gl.DeleteShader(shader)
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
 
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
-	fs := &SkyFragmentShader{
-		uint32:                 program,
+	return &SkyShader{
+		uint32:     program,
+		Projection: uniforms.NewMatrix4(program, projectionLoc),
+		View:       uniforms.NewMatrix4(program, viewLoc),
 		DirectionalLightBuffer: buffers.NewBinding(2),
-	}
-
-	return fs, nil
+	}, nil
 }
 
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *SkyFragmentShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.FRAGMENT_SHADER_BIT, s.uint32)
+// Program returns the opengl program id of this vertex shader.
+func (s *SkyShader) Program() uint32 {
+	return s.uint32
+}
+
+// Use binds this program to be used.
+func (s *SkyShader) Use() {
+	gl.UseProgram(s.uint32)
 }

@@ -14,8 +14,8 @@ type RenderablePortion struct {
 }
 
 type Renderable interface {
-	Render(*shaders.ColorVertexShader, *shaders.ColorFragmentShader)
-	RenderDepth(*shaders.DepthVertexShader, *shaders.DepthFragmentShader)
+	Render(*shaders.ColorShader)
+	RenderDepth(*shaders.DepthShader)
 }
 
 // VAORenderable is a object wrapping around something that is renderable on top of a vao.
@@ -40,7 +40,7 @@ func NewVAORenderable(verticies []Vertex, diffuse uint32) *VAORenderable {
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*8*4, gl.Ptr(verticies), gl.STATIC_DRAW)
 
-	BindVertexAttributes(Renderer.colorVertexShader.Program())
+	BindVertexAttributes(Renderer.colorShader.Program())
 
 	return &VAORenderable{
 		vao:         vao,
@@ -64,7 +64,7 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *VAO
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*8*4, gl.Ptr(verticies), gl.STATIC_DRAW)
 
-	BindVertexAttributes(Renderer.colorVertexShader.Program())
+	BindVertexAttributes(Renderer.colorShader.Program())
 
 	return &VAORenderable{
 		vao:         vao,
@@ -83,21 +83,21 @@ func (r *VAORenderable) getModelMatrix() mgl32.Mat4 {
 }
 
 // Render bind's this renderable's VAO and draws.
-func (r *VAORenderable) Render(vertexShader *shaders.ColorVertexShader, fragmentShader *shaders.ColorFragmentShader) {
+func (r *VAORenderable) Render(colorShader *shaders.ColorShader) {
 	gl.BindVertexArray(r.vao)
-	vertexShader.Model.Set(r.getModelMatrix())
+	colorShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
-		fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
+		colorShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
 		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
 	}
 }
 
 // Render bind's this renderable's VAO and draws for depth.
-func (r *VAORenderable) RenderDepth(vertexShader *shaders.DepthVertexShader, fragmentShader *shaders.DepthFragmentShader) {
+func (r *VAORenderable) RenderDepth(depthShader *shaders.DepthShader) {
 	gl.BindVertexArray(r.vao)
-	vertexShader.Model.Set(r.getModelMatrix())
+	depthShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
-		fragmentShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
+		depthShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
 		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
 	}
 }

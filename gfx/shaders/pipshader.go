@@ -18,15 +18,11 @@ const (
 	
 	uniform mat4 projection;
 	
-	out gl_PerVertex
-	{
-		vec4 gl_Position;
-		vec2 uv;
-	} vertex_out;
+	out vec2 uv_out;
 	
 	void main() {
 		gl_Position = projection * vec4(pos, 0, 1);
-		vertex_out.uv = uv;
+		uv_out = uv;
 	}` + "\x00"
 	pipShaderOriginalFragmentSourceFile = `pipshader.vert`
 	pipShaderFragSrc                    = `
@@ -35,148 +31,101 @@ const (
 uniform sampler2D textureSampler;
 uniform vec2 nearFar;
 
-in VERTEX_OUT
-{
-    vec4 gl_Position;
-	vec2 uv;
-} fragment_in;
+in vec2 uv_out;
 
 out vec4 outputColor;
 
 void main() {
 	float n = nearFar.x;
 	float f = nearFar.y;
-	float z = texture(textureSampler, fragment_in.uv).r;
+	float z = texture(textureSampler, uv_out).r;
 	float depth = (2.0 * n) / (f + n - z * (f - n));	
 
 	outputColor = vec4(vec3(z), 1.0);
 }` + "\x00"
 )
 
-// PipVertexShader is a VertexShader.
-type PipVertexShader struct {
+// PipShader is a Shader.
+type PipShader struct {
 	uint32
 
 	Projection *uniforms.Matrix4
-}
-
-// NewPipVertexShader instantiates and initializes a PipVertexShader object.
-func NewPipVertexShader() (*PipVertexShader, error) {
-	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.VERTEX_SHADER)
-
-	csources, free := gl.Strs(pipShaderVertSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to compile %v: %v", pipShaderOriginalVertexSourceFile, log)
-	}
-
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
-	gl.LinkProgram(program)
-
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", pipShaderOriginalVertexSourceFile, log)
-	}
-
-	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
-
-	gl.DeleteShader(shader)
-
-	return &PipVertexShader{
-		uint32:     program,
-		Projection: uniforms.NewMatrix4(program, projectionLoc),
-	}, nil
-}
-
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *PipVertexShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *PipVertexShader) Program() uint32 {
-	return s.uint32
-}
-
-// PipFragmentShader represents a FragmentShader
-type PipFragmentShader struct {
-	uint32
 
 	DepthMap *uniforms.Sampler2D
 	NearFar  *uniforms.Vector2
 }
 
-// NewPipFragmentShader instantiates and initializes a PipFragmentShader object.
-func NewPipFragmentShader() (*PipFragmentShader, error) {
+// NewPipShader instantiates and initializes a Shader object.
+func NewPipShader() (*PipShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.FRAGMENT_SHADER)
 
-	csources, free := gl.Strs(pipShaderFragSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// VertexShader
+	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
+	vertexSrc, freeVertexSrc := gl.Strs(pipShaderVertSrc)
+	gl.ShaderSource(vertexShader, 1, vertexSrc, nil)
+	freeVertexSrc()
+	gl.CompileShader(vertexShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(vertexShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
+		gl.GetShaderInfoLog(vertexShader, logLength, nil, gl.Str(log))
+		return nil, fmt.Errorf("failed to compile %v: %v", pipShaderOriginalVertexSourceFile, log)
+	}
+	gl.AttachShader(program, vertexShader)
 
+	// FragmentShader
+	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	fragmentSrc, freeFragmentSrc := gl.Strs(pipShaderFragSrc)
+	gl.ShaderSource(fragmentShader, 1, fragmentSrc, nil)
+	freeFragmentSrc()
+	gl.CompileShader(fragmentShader)
+	gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(fragmentShader, gl.INFO_LOG_LENGTH, &logLength)
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(fragmentShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", pipShaderOriginalFragmentSourceFile, log)
 	}
+	gl.AttachShader(program, fragmentShader)
 
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
+	//Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", pipShaderOriginalFragmentSourceFile, log)
+		return nil, fmt.Errorf("failed to link %v: %v", pipShaderOriginalVertexSourceFile, log)
 	}
 
+	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	depthMapLoc := gl.GetUniformLocation(program, gl.Str("textureSampler\x00"))
 	nearFarLoc := gl.GetUniformLocation(program, gl.Str("nearFar\x00"))
 
-	gl.DeleteShader(shader)
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
 
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
-	return &PipFragmentShader{
-		uint32:   program,
-		DepthMap: uniforms.NewSampler2D(program, depthMapLoc),
-		NearFar:  uniforms.NewVector2(program, nearFarLoc),
+	return &PipShader{
+		uint32:     program,
+		Projection: uniforms.NewMatrix4(program, projectionLoc),
+		DepthMap:   uniforms.NewSampler2D(program, depthMapLoc),
+		NearFar:    uniforms.NewVector2(program, nearFarLoc),
 	}, nil
 }
 
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *PipFragmentShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.FRAGMENT_SHADER_BIT, s.uint32)
+// Program returns the opengl program id of this vertex shader.
+func (s *PipShader) Program() uint32 {
+	return s.uint32
+}
+
+// Use binds this program to be used.
+func (s *PipShader) Use() {
+	gl.UseProgram(s.uint32)
 }

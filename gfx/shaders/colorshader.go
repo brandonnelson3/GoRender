@@ -6,10 +6,8 @@ import (
 
 	"github.com/brandonnelson3/GoRender/gfx/buffers"
 	"github.com/brandonnelson3/GoRender/gfx/uniforms"
-	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/gl/v4.5-core/gl"
-	"github.com/go-gl/glfw/v3.1/glfw"
 )
 
 const (
@@ -28,25 +26,21 @@ in vec3 vert;
 in vec3 norm;
 in vec2 uv;
 
-out gl_PerVertex
-{
-	vec4 gl_Position;
-	vec4 position;
-	vec3 worldPosition;
-	vec3 normal;
-	vec2 uv;	
-	vec4 lightPositions[NUMBER_OF_CASCADES];
-} vertex_out;
+out vec4 position;
+out vec3 worldPosition;
+out vec3 norm_out;
+out vec2 uv_out;	
+out vec4 lightPositions[NUMBER_OF_CASCADES];
 
 void main() {
 	gl_Position = projection * view * model * vec4(vert, 1);
-	vertex_out.position = projection * view * model * vec4(vert, 1);
-	vertex_out.worldPosition = vec3(model * vec4(vert, 1));
-	vertex_out.normal = norm;
-	vertex_out.uv = uv;
+	position = projection * view * model * vec4(vert, 1);
+	worldPosition = vec3(model * vec4(vert, 1));
+	norm_out = norm;
+	uv_out = uv;
 
 	for (int i=0;i < NUMBER_OF_CASCADES; i++) {
-		vertex_out.lightPositions[i] = lightViewProjs[i] * model * vec4(vert, 1);
+		lightPositions[i] = lightViewProjs[i] * model * vec4(vert, 1);
 	}
 }` + "\x00"
 	colorShaderOriginalFragmentSourceFile = `colorshader.frag`
@@ -102,15 +96,11 @@ uniform sampler2D shadowMap4;
 // Portion of the depth to consider to prevent shadow acne. This is proportional to the depth, to prevent peter panning.
 const float shadowBias = 0.9995;
 
-in VERTEX_OUT
-{
-	vec4 gl_FragCoord;
-	vec4 position;
-	vec3 worldPosition;
-	vec3 normal;
-	vec2 uv;	
-	vec4 lightPositions[NUMBER_OF_CASCADES];
-} fragment_in;
+in vec4 position;
+in vec3 worldPosition;
+in vec3 norm_out;
+in vec2 uv_out;	
+in vec4 lightPositions[NUMBER_OF_CASCADES];
 
 out vec4 outputColor;
 
@@ -162,7 +152,7 @@ void main() {
 	uint offset = index * 1024;
 	
 	if (renderMode == 0 || renderMode == 5) {		
-		vec4 diffuseColor = texture(diffuse, fragment_in.uv);
+		vec4 diffuseColor = texture(diffuse, uv_out);
 		if (diffuseColor.a != 1) {
 			discard;
 		} 
@@ -172,24 +162,24 @@ void main() {
 		for (i=0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
 			uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 			PointLight light = lightBuffer.data[lightIndex];
-			vec3 lightVector = light.position - fragment_in.worldPosition;
+			vec3 lightVector = light.position - worldPosition;
 			float dist = length(lightVector);
-			float NdL = max(0.0f, dot(fragment_in.normal, lightVector*(1.0f/dist)));
+			float NdL = max(0.0f, dot(norm_out, lightVector*(1.0f/dist)));
 			float attenuation = 1.0f - clamp(dist * (1.0/(light.radius)), 0.0, 1.0);
 			vec3 diffuse = NdL * light.color * light.intensity;
 			pointLightColor += attenuation * diffuse;
 		}
 		
 		DirectionalLight directionalLight = directionalLightBuffer.data;
-		float NdL = max(0.0f, dot(fragment_in.normal, -1*directionalLight.direction));
+		float NdL = max(0.0f, dot(norm_out, -1*directionalLight.direction));
 		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
-		float depthTest = fragment_in.position.z;
+		float depthTest = position.z;
 
 		vec3 shadowCoords[4] = vec3[](
-			fragment_in.lightPositions[0] * 0.5 + 0.5, 
-			fragment_in.lightPositions[1] * 0.5 + 0.5, 
-			fragment_in.lightPositions[2] * 0.5 + 0.5,
-			fragment_in.lightPositions[3] * 0.5 + 0.5
+			lightPositions[0] * 0.5 + 0.5, 
+			lightPositions[1] * 0.5 + 0.5, 
+			lightPositions[2] * 0.5 + 0.5,
+			lightPositions[3] * 0.5 + 0.5
 		);
 
 		int shadowIndex = 4;
@@ -222,90 +212,22 @@ void main() {
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}
 		outputColor = vec4(vec3(float(i)/256)+vec3(0.1), 1.0);
 	} else if (renderMode == 2) {
-		outputColor = vec4(abs(fragment_in.normal), 1.0);
+		outputColor = vec4(abs(norm_out), 1.0);
 	} else if (renderMode == 3) {
-		outputColor = vec4(fragment_in.uv, 0, 1.0);
+		outputColor = vec4(uv_out, 0, 1.0);
 	} else if (renderMode == 4) {
-		outputColor = texture(diffuse, fragment_in.uv);
+		outputColor = texture(diffuse, uv_out);
 	} 
 }
 ` + "\x00"
 )
 
-// ColorVertexShader is a VertexShader.
-type ColorVertexShader struct {
+// ColorShader is a Shader.
+type ColorShader struct {
 	uint32
 
 	Projection, View, Model *uniforms.Matrix4
 	LightViewProjs          *uniforms.Matrix4Array
-}
-
-// NewColorVertexShader instantiates and initializes a shader object.
-func NewColorVertexShader() (*ColorVertexShader, error) {
-	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.VERTEX_SHADER)
-
-	csources, free := gl.Strs(colorShaderVertSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to compile %v: %v", colorShaderOriginalVertexSourceFile, log)
-	}
-
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
-	gl.LinkProgram(program)
-
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", colorShaderOriginalVertexSourceFile, log)
-	}
-
-	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
-	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
-	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
-	lightViewProjsLoc := gl.GetUniformLocation(program, gl.Str("lightViewProjs\x00"))
-
-	gl.DeleteShader(shader)
-
-	return &ColorVertexShader{
-		uint32:         program,
-		Projection:     uniforms.NewMatrix4(program, projectionLoc),
-		View:           uniforms.NewMatrix4(program, viewLoc),
-		Model:          uniforms.NewMatrix4(program, modelLoc),
-		LightViewProjs: uniforms.NewMatrix4Array(program, lightViewProjsLoc),
-	}, nil
-}
-
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *ColorVertexShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
-}
-
-// Program returns the opengl program id of this vertex shader.
-func (s *ColorVertexShader) Program() uint32 {
-	return s.uint32
-}
-
-// ColorFragmentShader represents a ColorFragmentShader
-type ColorFragmentShader struct {
-	uint32
 
 	RenderMode         *uniforms.Int
 	NumTilesX          *uniforms.UInt
@@ -321,43 +243,58 @@ type ColorFragmentShader struct {
 	ShadowMap1, ShadowMap2, ShadowMap3, ShadowMap4 *uniforms.Sampler2D
 }
 
-// NewColorFragmentShader instantiates and initializes a ColorFragmentShader object.
-func NewColorFragmentShader() (*ColorFragmentShader, error) {
+// NewColorShader instantiates and initializes a shader object.
+func NewColorShader() (*ColorShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.FRAGMENT_SHADER)
 
-	csources, free := gl.Strs(colorShaderFragSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// VertexShader
+	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
+	vertexSrc, freeVertexSrc := gl.Strs(colorShaderVertSrc)
+	gl.ShaderSource(vertexShader, 1, vertexSrc, nil)
+	freeVertexSrc()
+	gl.CompileShader(vertexShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(vertexShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
+		gl.GetShaderInfoLog(vertexShader, logLength, nil, gl.Str(log))
+		return nil, fmt.Errorf("failed to compile %v: %v", colorShaderOriginalVertexSourceFile, log)
+	}
+	gl.AttachShader(program, vertexShader)
 
+	// FragmentShader
+	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	fragmentSrc, freeFragmentSrc := gl.Strs(colorShaderFragSrc)
+	gl.ShaderSource(fragmentShader, 1, fragmentSrc, nil)
+	freeFragmentSrc()
+	gl.CompileShader(fragmentShader)
+	gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(fragmentShader, gl.INFO_LOG_LENGTH, &logLength)
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(fragmentShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", colorShaderOriginalFragmentSourceFile, log)
 	}
+	gl.AttachShader(program, fragmentShader)
 
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
+	// Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", colorShaderOriginalFragmentSourceFile, log)
+		return nil, fmt.Errorf("failed to link %v: %v", colorShaderOriginalVertexSourceFile, log)
 	}
 
+	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
+	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
+	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
+	lightViewProjsLoc := gl.GetUniformLocation(program, gl.Str("lightViewProjs\x00"))
 	renderModeLoc := gl.GetUniformLocation(program, gl.Str("renderMode\x00"))
 	numTilesXLoc := gl.GetUniformLocation(program, gl.Str("numTilesX\x00"))
 	zNearLoc := gl.GetUniformLocation(program, gl.Str("zNear\x00"))
@@ -371,12 +308,17 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
 	shadowMap4Loc := gl.GetUniformLocation(program, gl.Str("shadowMap4\x00"))
 
-	gl.DeleteShader(shader)
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
 
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
-	fs := &ColorFragmentShader{
+	return &ColorShader{
 		uint32:                    program,
+		Projection:                uniforms.NewMatrix4(program, projectionLoc),
+		View:                      uniforms.NewMatrix4(program, viewLoc),
+		Model:                     uniforms.NewMatrix4(program, modelLoc),
+		LightViewProjs:            uniforms.NewMatrix4Array(program, lightViewProjsLoc),
 		RenderMode:                uniforms.NewInt(program, renderModeLoc),
 		NumTilesX:                 uniforms.NewUInt(program, numTilesXLoc),
 		ZNear:                     uniforms.NewFloat(program, zNearLoc),
@@ -392,21 +334,15 @@ func NewColorFragmentShader() (*ColorFragmentShader, error) {
 		ShadowMap2:                uniforms.NewSampler2D(program, shadowMap2Loc),
 		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 		ShadowMap4:                uniforms.NewSampler2D(program, shadowMap4Loc),
-	}
-
-	messagebus.RegisterType("key", func(m *messagebus.Message) {
-		pressedKeys := m.Data1.([]glfw.Key)
-		for _, key := range pressedKeys {
-			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
-				fs.RenderMode.Set(int32(key - glfw.KeyF1))
-			}
-		}
-	})
-
-	return fs, nil
+	}, nil
 }
 
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *ColorFragmentShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.FRAGMENT_SHADER_BIT, s.uint32)
+// Program returns the opengl program id of this vertex shader.
+func (s *ColorShader) Program() uint32 {
+	return s.uint32
+}
+
+// Use binds this program to be used.
+func (s *ColorShader) Use() {
+	gl.UseProgram(s.uint32)
 }

@@ -34,19 +34,10 @@ var (
 )
 
 type r struct {
-	lineShaderPipeline uint32
-	lineVertexShader   *shaders.LineVertexShader
-	lineFragmentShader *shaders.LineFragmentShader
-
-	depthShaderPipeline uint32
-	depthVertexShader   *shaders.DepthVertexShader
-	depthFragmentShader *shaders.DepthFragmentShader
-
+	lineShader         *shaders.LineShader
+	depthShader        *shaders.DepthShader
 	lightCullingShader *shaders.LightCullingShader
-
-	colorShaderPipeline uint32
-	colorVertexShader   *shaders.ColorVertexShader
-	colorFragmentShader *shaders.ColorFragmentShader
+	colorShader        *shaders.ColorShader
 
 	csmDepthMapFBO uint32
 	csmDepthMaps   [NumberOfCascades]uint32
@@ -66,52 +57,25 @@ func InitRenderer() {
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 	gl.CullFace(gl.BACK)
 
-	lvs, err := shaders.NewLineVertexShader()
+	ls, err := shaders.NewLineShader()
 	if err != nil {
-		log.Fatalf("Failed to compile LineVertexShader: %v", err)
+		log.Fatalf("Failed to compile LineShader: %v", err)
 	}
-	lfs, err := shaders.NewLineFragmentShader()
-	if err != nil {
-		log.Fatalf("Failed to compile LineFragmentShader: %v", err)
-	}
-	var lsp uint32
-	gl.CreateProgramPipelines(1, &lsp)
-	lvs.AddToPipeline(lsp)
-	lfs.AddToPipeline(lsp)
-	gl.ValidateProgramPipeline(lsp)
 
-	dvs, err := shaders.NewDepthVertexShader()
+	ds, err := shaders.NewDepthShader()
 	if err != nil {
-		log.Fatalf("Failed to compile DepthVertexShader: %v", err)
+		log.Fatalf("Failed to compile DepthShader: %v", err)
 	}
-	dfs, err := shaders.NewDepthFragmentShader()
-	if err != nil {
-		log.Fatalf("Failed to compile DepthFragmentShader: %v", err)
-	}
-	var dsp uint32
-	gl.CreateProgramPipelines(1, &dsp)
-	dvs.AddToPipeline(dsp)
-	dfs.AddToPipeline(dsp)
-	gl.ValidateProgramPipeline(dsp)
 
 	lcs, err := shaders.NewLightCullingShader()
 	if err != nil {
 		log.Fatalf("Failed to compile LightCullingShader: %v", err)
 	}
 
-	cvs, err := shaders.NewColorVertexShader()
+	cs, err := shaders.NewColorShader()
 	if err != nil {
-		log.Fatalf("Failed to compile ColorVertexShader: %v", err)
+		log.Fatalf("Failed to compile ColorShader: %v", err)
 	}
-	cfs, err := shaders.NewColorFragmentShader()
-	if err != nil {
-		log.Fatalf("Failed to compile ColorFragmentShader: %v", err)
-	}
-	var csp uint32
-	gl.CreateProgramPipelines(1, &csp)
-	cvs.AddToPipeline(csp)
-	cfs.AddToPipeline(csp)
-	gl.ValidateProgramPipeline(csp)
 
 	var depthMapFBO uint32
 	gl.GenFramebuffers(1, &depthMapFBO)
@@ -158,7 +122,7 @@ func InitRenderer() {
 		pressedKeys := m.Data1.([]glfw.Key)
 		for _, key := range pressedKeys {
 			if key >= glfw.KeyF1 && key <= glfw.KeyF25 {
-				cfs.RenderMode.Set(int32(key - glfw.KeyF1))
+				cs.RenderMode.Set(int32(key - glfw.KeyF1))
 			}
 			switch key {
 			case glfw.KeyPageUp:
@@ -193,20 +157,14 @@ func InitRenderer() {
 	})
 
 	Renderer = r{
-		lineShaderPipeline:  lsp,
-		lineVertexShader:    lvs,
-		lineFragmentShader:  lfs,
-		depthShaderPipeline: dsp,
-		depthVertexShader:   dvs,
-		depthFragmentShader: dfs,
-		lightCullingShader:  lcs,
-		colorShaderPipeline: csp,
-		colorVertexShader:   cvs,
-		colorFragmentShader: cfs,
-		depthMapFBO:         depthMapFBO,
-		depthMap:            depthMap,
-		csmDepthMapFBO:      csmDepthMapFBO,
-		csmDepthMaps:        csmDepthMaps,
+		lineShader:         ls,
+		depthShader:        ds,
+		lightCullingShader: lcs,
+		colorShader:        cs,
+		depthMapFBO:        depthMapFBO,
+		depthMap:           depthMap,
+		csmDepthMapFBO:     csmDepthMapFBO,
+		csmDepthMaps:       csmDepthMaps,
 	}
 }
 
@@ -227,7 +185,7 @@ func getTotalNumTiles() uint32 {
 
 func (renderer *r) Update(updateables []Updateable) {
 	for _, u := range updateables {
-		u.Update(renderer.colorVertexShader)
+		u.Update(renderer.colorShader)
 	}
 }
 
@@ -236,15 +194,15 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 
 	// Step 1: Depth Pass for each cascade for shadowing.
 	gl.Viewport(0, 0, shadowMapSize, shadowMapSize)
-	gl.BindProgramPipeline(renderer.depthShaderPipeline)
-	renderer.depthVertexShader.View.Set(mgl32.Ident4())
+	renderer.depthShader.Use()
+	renderer.depthShader.View.Set(mgl32.Ident4())
 	for i, m := range renderer.csmDepthMaps {
 		gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.csmDepthMapFBO)
 		gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, m, 0)
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
-		renderer.depthVertexShader.Projection.Set(FirstPerson.shadowMatrices[i])
+		renderer.depthShader.Projection.Set(FirstPerson.shadowMatrices[i])
 		for _, renderable := range renderables {
-			renderable.RenderDepth(renderer.depthVertexShader, renderer.depthFragmentShader)
+			renderable.RenderDepth(renderer.depthShader)
 		}
 	}
 
@@ -252,13 +210,12 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 
 	// Step 2: Depth Pass for pointlight culling
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
-	gl.BindProgramPipeline(renderer.depthShaderPipeline)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
-	renderer.depthVertexShader.View.Set(ActiveCamera.GetView())
-	renderer.depthVertexShader.Projection.Set(Window.GetProjection())
+	renderer.depthShader.View.Set(ActiveCamera.GetView())
+	renderer.depthShader.Projection.Set(Window.GetProjection())
 	for _, renderable := range renderables {
-		renderable.RenderDepth(renderer.depthVertexShader, renderer.depthFragmentShader)
+		renderable.RenderDepth(renderer.depthShader)
 	}
 
 	// Step 3: Light culling
@@ -277,31 +234,31 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	sky.Render()
-	gl.BindProgramPipeline(renderer.colorShaderPipeline)
-	renderer.colorVertexShader.View.Set(ActiveCamera.GetView())
-	renderer.colorVertexShader.Projection.Set(Window.GetProjection())
-	renderer.colorVertexShader.LightViewProjs.Set(&FirstPerson.shadowMatrices[0][0], NumberOfCascades)
-	renderer.colorFragmentShader.NumTilesX.Set(getNumTilesX())
-	renderer.colorFragmentShader.LightBuffer.Set(GetPointLightBuffer())
-	renderer.colorFragmentShader.ZNear.Set(Window.nearPlane)
-	renderer.colorFragmentShader.ZFar.Set(Window.farPlane)
-	renderer.colorFragmentShader.ShadowMapSize.Set(shadowMapSize)
-	renderer.colorFragmentShader.AmbientLightColor.Set(ambientLightColor)
-	renderer.colorFragmentShader.CascadeDepthLimits.Set(&ShadowSplits[0], NumberOfCascades+1)
-	renderer.colorFragmentShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
-	renderer.colorFragmentShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
-	renderer.colorFragmentShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])
-	renderer.colorFragmentShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
-	renderer.colorFragmentShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
-	renderer.colorFragmentShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
+	renderer.colorShader.Use()
+	renderer.colorShader.View.Set(ActiveCamera.GetView())
+	renderer.colorShader.Projection.Set(Window.GetProjection())
+	renderer.colorShader.LightViewProjs.Set(&FirstPerson.shadowMatrices[0][0], NumberOfCascades)
+	renderer.colorShader.NumTilesX.Set(getNumTilesX())
+	renderer.colorShader.LightBuffer.Set(GetPointLightBuffer())
+	renderer.colorShader.ZNear.Set(Window.nearPlane)
+	renderer.colorShader.ZFar.Set(Window.farPlane)
+	renderer.colorShader.ShadowMapSize.Set(shadowMapSize)
+	renderer.colorShader.AmbientLightColor.Set(ambientLightColor)
+	renderer.colorShader.CascadeDepthLimits.Set(&ShadowSplits[0], NumberOfCascades+1)
+	renderer.colorShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
+	renderer.colorShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
+	renderer.colorShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])
+	renderer.colorShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
+	renderer.colorShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
+	renderer.colorShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	for _, renderable := range renderables {
-		renderable.Render(renderer.colorVertexShader, renderer.colorFragmentShader)
+		renderable.Render(renderer.colorShader)
 	}
 
 	if ActiveCamera == ThirdPerson {
-		gl.BindProgramPipeline(renderer.lineShaderPipeline)
-		renderer.lineVertexShader.View.Set(ThirdPerson.GetView())
-		renderer.lineVertexShader.Projection.Set(Window.GetProjection())
+		renderer.lineShader.Use()
+		renderer.lineShader.View.Set(ThirdPerson.GetView())
+		renderer.lineShader.Projection.Set(Window.GetProjection())
 		FirstPerson.RenderFrustum()
 	}
 

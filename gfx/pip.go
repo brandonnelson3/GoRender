@@ -10,10 +10,9 @@ import (
 )
 
 var (
-	pipeline, planeSquareVao uint32
+	planeSquareVao uint32
 
-	pipVertexShader   *shaders.PipVertexShader
-	pipFragmentShader *shaders.PipFragmentShader
+	pipShader *shaders.PipShader
 
 	enabled  = false
 	depthMap *uint32
@@ -22,21 +21,10 @@ var (
 
 func InitPip() {
 	var err error
-	pipVertexShader, err = shaders.NewPipVertexShader()
+	pipShader, err = shaders.NewPipShader()
 	if err != nil {
 		panic(err)
 	}
-	pipFragmentShader, err = shaders.NewPipFragmentShader()
-	if err != nil {
-		panic(err)
-	}
-
-	gl.CreateProgramPipelines(1, &pipeline)
-	pipVertexShader.AddToPipeline(pipeline)
-	pipFragmentShader.AddToPipeline(pipeline)
-	gl.ValidateProgramPipeline(pipeline)
-	gl.UseProgram(0)
-	gl.BindProgramPipeline(pipeline)
 
 	// Square definition
 	sizex := float32(480.0)
@@ -60,7 +48,7 @@ func InitPip() {
 	gl.GenBuffers(1, &planeSquareVbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, planeSquareVbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(planeVertices)*4*4, gl.Ptr(planeVertices), gl.STATIC_DRAW)
-	BindPipVertexAttributes(pipVertexShader.Program())
+	BindPipVertexAttributes(pipShader.Program())
 
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
 		pressedKeys := m.Data1.([]glfw.Key)
@@ -83,10 +71,10 @@ func UpdatePip(m *uint32, nf mgl32.Vec2) {
 func RenderPip() {
 	if enabled {
 		gl.Disable(gl.DEPTH_TEST)
-		gl.BindProgramPipeline(pipeline)
-		pipVertexShader.Projection.Set(mgl32.Ortho(0.0, float32(Window.Width), float32(Window.Height), 0.0, -1.0, 1.0))
-		pipFragmentShader.DepthMap.Set(gl.TEXTURE4, 4, *depthMap)
-		pipFragmentShader.NearFar.Set(nearFar)
+		pipShader.Use()
+		pipShader.Projection.Set(mgl32.Ortho(0.0, float32(Window.Width), float32(Window.Height), 0.0, -1.0, 1.0))
+		pipShader.DepthMap.Set(gl.TEXTURE4, 4, *depthMap)
+		pipShader.NearFar.Set(nearFar)
 		gl.BindVertexArray(planeSquareVao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 2*3)
 		gl.ActiveTexture(gl.TEXTURE4)

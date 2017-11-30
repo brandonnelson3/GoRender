@@ -20,153 +20,102 @@ uniform mat4 view;
 in vec3 vert;
 in vec3 color;
 
-out gl_PerVertex
-{
-	vec4 gl_Position;
-	vec3 color;
-} vertex_out;
+out vec3 color_out;
 
 void main() {
 	gl_Position = projection * view * vec4(vert, 1);
-	vertex_out.color = color;
+	color_out = color;
 }` + "\x00"
 	lineShaderOriginalFragmentSourceFile = `lineshader.frag`
 	lineShaderFragSrc                    = `
 #version 450
 
-in VERTEX_OUT
-{
-	vec4 gl_FragCoord;
-	vec3 color;
-} fragment_in;
+in vec3 color_out;
 
 out vec4 outputColor;
 
 void main() {
-	outputColor = vec4(fragment_in.color, 1);
+	outputColor = vec4(color_out, 1);
 }
 ` + "\x00"
 )
 
-// LineVertexShader is a VertexShader.
-type LineVertexShader struct {
+// LineShader is a Shader.
+type LineShader struct {
 	uint32
 
 	Projection, View *uniforms.Matrix4
 }
 
-// NewLineVertexShader instantiates and initializes a shader object.
-func NewLineVertexShader() (*LineVertexShader, error) {
+// NewLineShader instantiates and initializes a shader object.
+func NewLineShader() (*LineShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.VERTEX_SHADER)
 
-	csources, free := gl.Strs(lineShaderVertSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// VertexShader
+	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
+	vertexSrc, freeVertexSrc := gl.Strs(lineShaderVertSrc)
+	gl.ShaderSource(vertexShader, 1, vertexSrc, nil)
+	freeVertexSrc()
+	gl.CompileShader(vertexShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(vertexShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
+		gl.GetShaderInfoLog(vertexShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", lineShaderOriginalVertexSourceFile, log)
 	}
+	gl.AttachShader(program, vertexShader)
 
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
+	// FragmentShader
+	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	fragmentSrc, freeFragmentSrc := gl.Strs(lineShaderFragSrc)
+	gl.ShaderSource(fragmentShader, 1, fragmentSrc, nil)
+	freeFragmentSrc()
+	gl.CompileShader(fragmentShader)
+	gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(fragmentShader, gl.INFO_LOG_LENGTH, &logLength)
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(fragmentShader, logLength, nil, gl.Str(log))
+		return nil, fmt.Errorf("failed to compile %v: %v", lineShaderOriginalFragmentSourceFile, log)
+	}
+	gl.AttachShader(program, fragmentShader)
+
+	// Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
 		return nil, fmt.Errorf("failed to link %v: %v", lineShaderOriginalVertexSourceFile, log)
 	}
 
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
 
-	gl.DeleteShader(shader)
+	gl.DeleteShader(vertexShader)
+	gl.DeleteShader(fragmentShader)
 
-	return &LineVertexShader{
+	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
+
+	return &LineShader{
 		uint32:     program,
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 	}, nil
 }
 
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *LineVertexShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
-}
-
 // Program returns the opengl program id of this vertex shader.
-func (s *LineVertexShader) Program() uint32 {
+func (s *LineShader) Program() uint32 {
 	return s.uint32
 }
 
-// LineFragmentShader represents a LineFragmentShader
-type LineFragmentShader struct {
-	uint32
-}
-
-// NewLineFragmentShader instantiates and initializes a LineFragmentShader object.
-func NewLineFragmentShader() (*LineFragmentShader, error) {
-	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-
-	csources, free := gl.Strs(lineShaderFragSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to compile %v: %v", lineShaderOriginalFragmentSourceFile, log)
-	}
-
-	gl.AttachShader(program, shader)
-	gl.ProgramParameteri(program, gl.PROGRAM_SEPARABLE, gl.TRUE)
-	gl.LinkProgram(program)
-
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return nil, fmt.Errorf("failed to link %v: %v", lineShaderOriginalFragmentSourceFile, log)
-	}
-
-	gl.DeleteShader(shader)
-
-	gl.BindFragDataLocation(program, 0, gl.Str("outputLine\x00"))
-
-	fs := &LineFragmentShader{
-		uint32: program,
-	}
-	return fs, nil
-}
-
-// AddToPipeline adds this shader to the provided pipeline.
-func (s *LineFragmentShader) AddToPipeline(pipeline uint32) {
-	gl.UseProgramStages(pipeline, gl.FRAGMENT_SHADER_BIT, s.uint32)
+// Use binds this program to be used.
+func (s *LineShader) Use() {
+	gl.UseProgram(s.uint32)
 }
