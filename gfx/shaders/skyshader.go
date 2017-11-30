@@ -249,11 +249,9 @@ func (s *SkyVertexShader) AddToPipeline(pipeline uint32) {
 	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
 }
 
-// BindVertexAttributes binds the attributes per vertex.
-func (s *SkyVertexShader) BindVertexAttributes() {
-	vertAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("vert\x00")))
-	gl.EnableVertexAttribArray(vertAttrib)
-	gl.VertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 3*4, gl.PtrOffset(0))
+// Program returns the opengl program id of this vertex shader.
+func (s *SkyVertexShader) Program() uint32 {
+	return s.uint32
 }
 
 // SkyFragmentShader represents a SkyFragmentShader

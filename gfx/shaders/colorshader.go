@@ -298,17 +298,9 @@ func (s *ColorVertexShader) AddToPipeline(pipeline uint32) {
 	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
 }
 
-// BindVertexAttributes binds the attributes per vertex.
-func (s *ColorVertexShader) BindVertexAttributes() {
-	vertAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("vert\x00")))
-	gl.EnableVertexAttribArray(vertAttrib)
-	gl.VertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 8*4, gl.PtrOffset(0))
-	normAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("norm\x00")))
-	gl.EnableVertexAttribArray(normAttrib)
-	gl.VertexAttribPointer(normAttrib, 3, gl.FLOAT, false, 8*4, gl.PtrOffset(12))
-	uvAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("uv\x00")))
-	gl.EnableVertexAttribArray(uvAttrib)
-	gl.VertexAttribPointer(uvAttrib, 2, gl.FLOAT, false, 8*4, gl.PtrOffset(24))
+// Program returns the opengl program id of this vertex shader.
+func (s *ColorVertexShader) Program() uint32 {
+	return s.uint32
 }
 
 // ColorFragmentShader represents a ColorFragmentShader

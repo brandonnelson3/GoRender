@@ -60,7 +60,7 @@ func InitPip() {
 	gl.GenBuffers(1, &planeSquareVbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, planeSquareVbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(planeVertices)*4*4, gl.Ptr(planeVertices), gl.STATIC_DRAW)
-	pipVertexShader.BindVertexAttributes()
+	BindPipVertexAttributes(pipVertexShader.Program())
 
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
 		pressedKeys := m.Data1.([]glfw.Key)

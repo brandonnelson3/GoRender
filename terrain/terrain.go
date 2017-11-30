@@ -23,15 +23,15 @@ type cell struct {
 	verts []gfx.Vertex
 }
 
-func (c *cell) Update(depthVertexShader *shaders.DepthVertexShader, colorVertexShader *shaders.ColorVertexShader) {
+func (c *cell) Update(colorVertexShader *shaders.ColorVertexShader) {
 	if c.vao == 0 {
 		gl.GenVertexArrays(1, &c.vao)
 		gl.BindVertexArray(c.vao)
 		gl.GenBuffers(1, &c.vbo)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(c.verts)*8*4, gl.Ptr(c.verts), gl.STATIC_DRAW)
-		colorVertexShader.BindVertexAttributes()
-		depthVertexShader.BindVertexAttributes()
+
+		gfx.BindVertexAttributes(colorVertexShader.Program())
 	}
 }
 
@@ -139,8 +139,8 @@ func (t *Terrain) GetHeight(x, z float32) float32 {
 	return float32((t.noise.Noise2D(float64(x)/10.0, float64(z)/10.0)+1)/2.0) * 4
 }
 
-func (t *Terrain) Update(depthVertexShader *shaders.DepthVertexShader, colorVertexShader *shaders.ColorVertexShader) {
-	t.c.Update(depthVertexShader, colorVertexShader)
+func (t *Terrain) Update(colorVertexShader *shaders.ColorVertexShader) {
+	t.c.Update(colorVertexShader)
 }
 
 func (t *Terrain) Render(vertexShader *shaders.ColorVertexShader, fragmentShader *shaders.ColorFragmentShader) {

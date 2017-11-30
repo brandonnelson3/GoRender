@@ -107,19 +107,14 @@ func NewPipVertexShader() (*PipVertexShader, error) {
 	}, nil
 }
 
-// BindVertexAttributes binds the attributes per vertex.
-func (s *PipVertexShader) BindVertexAttributes() {
-	posAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("pos\x00")))
-	gl.EnableVertexAttribArray(posAttrib)
-	gl.VertexAttribPointer(posAttrib, 2, gl.FLOAT, false, 4*4, gl.PtrOffset(0))
-	uvAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("uv\x00")))
-	gl.EnableVertexAttribArray(uvAttrib)
-	gl.VertexAttribPointer(uvAttrib, 2, gl.FLOAT, false, 4*4, gl.PtrOffset(8))
-}
-
 // AddToPipeline adds this shader to the provided pipeline.
 func (s *PipVertexShader) AddToPipeline(pipeline uint32) {
 	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
+}
+
+// Program returns the opengl program id of this vertex shader.
+func (s *PipVertexShader) Program() uint32 {
+	return s.uint32
 }
 
 // PipFragmentShader represents a FragmentShader

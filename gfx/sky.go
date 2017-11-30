@@ -37,7 +37,8 @@ func NewSky() (*Sky, error) {
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	vertexShader.BindVertexAttributes()
+
+	BindSkyVertexAttributes(vertexShader.Program())
 
 	return &Sky{
 		pipeline:       pipeline,

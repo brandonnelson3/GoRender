@@ -68,7 +68,7 @@ func InitCameras() {
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 
-	Renderer.lineVertexShader.BindVertexAttributes()
+	BindLineVertexAttributes(Renderer.lineVertexShader.Program())
 
 	FirstPerson = &camera{
 		position:                       mgl32.Vec3{0, 9, 0},

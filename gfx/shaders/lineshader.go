@@ -109,14 +109,9 @@ func (s *LineVertexShader) AddToPipeline(pipeline uint32) {
 	gl.UseProgramStages(pipeline, gl.VERTEX_SHADER_BIT, s.uint32)
 }
 
-// BindVertexAttributes binds the attributes per vertex.
-func (s *LineVertexShader) BindVertexAttributes() {
-	vertAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("vert\x00")))
-	gl.EnableVertexAttribArray(vertAttrib)
-	gl.VertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 6*4, gl.PtrOffset(0))
-	colorAttrib := uint32(gl.GetAttribLocation(s.uint32, gl.Str("color\x00")))
-	gl.EnableVertexAttribArray(colorAttrib)
-	gl.VertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 6*4, gl.PtrOffset(12))
+// Program returns the opengl program id of this vertex shader.
+func (s *LineVertexShader) Program() uint32 {
+	return s.uint32
 }
 
 // LineFragmentShader represents a LineFragmentShader
