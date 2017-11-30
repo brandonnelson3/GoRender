@@ -79,7 +79,6 @@ func InitRenderer() {
 	lvs.AddToPipeline(lsp)
 	lfs.AddToPipeline(lsp)
 	gl.ValidateProgramPipeline(lsp)
-	//lvs.BindVertexAttributes()
 
 	dvs, err := shaders.NewDepthVertexShader()
 	if err != nil {
@@ -94,7 +93,6 @@ func InitRenderer() {
 	dvs.AddToPipeline(dsp)
 	dfs.AddToPipeline(dsp)
 	gl.ValidateProgramPipeline(dsp)
-	//dvs.BindVertexAttributes()
 
 	lcs, err := shaders.NewLightCullingShader()
 	if err != nil {
@@ -114,7 +112,6 @@ func InitRenderer() {
 	cvs.AddToPipeline(csp)
 	cfs.AddToPipeline(csp)
 	gl.ValidateProgramPipeline(csp)
-	//cvs.BindVertexAttributes()
 
 	var depthMapFBO uint32
 	gl.GenFramebuffers(1, &depthMapFBO)
