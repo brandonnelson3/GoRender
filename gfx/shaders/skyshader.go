@@ -182,7 +182,7 @@ void main() {
 
 // SkyShader is a Shader.
 type SkyShader struct {
-	Shader
+	shader
 
 	Projection, View *uniforms.Matrix4
 
@@ -246,7 +246,7 @@ func NewSkyShader() (*SkyShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &SkyShader{
-		Shader:     Shader{program},
+		shader:     shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		DirectionalLightBuffer: buffers.NewBinding(2),

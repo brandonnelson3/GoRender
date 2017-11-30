@@ -42,7 +42,7 @@ void main() {
 
 // LineShader is a Shader.
 type LineShader struct {
-	Shader
+	shader
 
 	Projection, View *uniforms.Matrix4
 }
@@ -104,7 +104,7 @@ func NewLineShader() (*LineShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &LineShader{
-		Shader:     Shader{program},
+		shader:     shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 	}, nil

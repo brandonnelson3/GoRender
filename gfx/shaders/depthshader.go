@@ -45,7 +45,7 @@ void main() {
 
 // DepthShader is a Shader.
 type DepthShader struct {
-	Shader
+	shader
 
 	Projection, View, Model *uniforms.Matrix4
 
@@ -109,7 +109,7 @@ func NewDepthShader() (*DepthShader, error) {
 	gl.DeleteShader(fragmentShader)
 
 	return &DepthShader{
-		Shader:     Shader{program},
+		shader:     shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		Model:      uniforms.NewMatrix4(program, modelLoc),

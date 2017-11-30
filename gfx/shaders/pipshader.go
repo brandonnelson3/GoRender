@@ -47,7 +47,7 @@ void main() {
 
 // PipShader is a Shader.
 type PipShader struct {
-	Shader
+	shader
 
 	Projection *uniforms.Matrix4
 
@@ -113,7 +113,7 @@ func NewPipShader() (*PipShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &PipShader{
-		Shader:     Shader{program},
+		shader:     shader{program},
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		DepthMap:   uniforms.NewSampler2D(program, depthMapLoc),
 		NearFar:    uniforms.NewVector2(program, nearFarLoc),

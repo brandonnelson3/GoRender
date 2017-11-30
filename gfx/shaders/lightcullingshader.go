@@ -173,7 +173,7 @@ void main() {
 
 // LightCullingShader represents a Light Culling Compute Shader
 type LightCullingShader struct {
-	Shader
+	shader
 
 	DepthMap         *uniforms.Sampler2D
 	Projection, View *uniforms.Matrix4
@@ -186,36 +186,32 @@ type LightCullingShader struct {
 // NewLightCullingShader instantiates and initializes a LightCullingShader object.
 func NewLightCullingShader() (*LightCullingShader, error) {
 	program := gl.CreateProgram()
-	shader := gl.CreateShader(gl.COMPUTE_SHADER)
 
-	csources, free := gl.Strs(lightCullingShaderComputeSrc)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
+	// ComputeShader
+	computeShader := gl.CreateShader(gl.COMPUTE_SHADER)
+	computeSrc, freeComputeSrc := gl.Strs(lightCullingShaderComputeSrc)
+	gl.ShaderSource(computeShader, 1, computeSrc, nil)
+	freeComputeSrc()
+	gl.CompileShader(computeShader)
 	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	gl.GetShaderiv(computeShader, gl.COMPILE_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
+		gl.GetShaderiv(computeShader, gl.INFO_LOG_LENGTH, &logLength)
 		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
+		gl.GetShaderInfoLog(computeShader, logLength, nil, gl.Str(log))
 		return nil, fmt.Errorf("failed to compile %v: %v", lightCullingShaderOriginalComputeSourceFile, log)
 	}
+	gl.AttachShader(program, computeShader)
 
-	gl.AttachShader(program, shader)
+	// Linking
 	gl.LinkProgram(program)
-
 	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
 		log := strings.Repeat("\x00", int(logLength+1))
 		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
 		return nil, fmt.Errorf("failed to link %v: %v", lightCullingShaderOriginalComputeSourceFile, log)
 	}
 
@@ -225,10 +221,10 @@ func NewLightCullingShader() (*LightCullingShader, error) {
 	lightCountLoc := gl.GetUniformLocation(program, gl.Str("lightCount\x00"))
 	depthMapLoc := gl.GetUniformLocation(program, gl.Str("depthMap\x00"))
 
-	gl.DeleteShader(shader)
+	gl.DeleteShader(computeShader)
 
 	return &LightCullingShader{
-		Shader:                    Shader{program},
+		shader:                    shader{program},
 		DepthMap:                  uniforms.NewSampler2D(program, depthMapLoc),
 		Projection:                uniforms.NewMatrix4(program, projectionLoc),
 		View:                      uniforms.NewMatrix4(program, viewLoc),

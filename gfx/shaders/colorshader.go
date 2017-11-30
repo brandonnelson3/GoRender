@@ -224,7 +224,7 @@ void main() {
 
 // ColorShader is a Shader.
 type ColorShader struct {
-	Shader
+	shader
 
 	Projection, View, Model *uniforms.Matrix4
 	LightViewProjs          *uniforms.Matrix4Array
@@ -314,7 +314,7 @@ func NewColorShader() (*ColorShader, error) {
 	gl.BindFragDataLocation(program, 0, gl.Str("outputColor\x00"))
 
 	return &ColorShader{
-		Shader:                    Shader{program},
+		shader:                    shader{program},
 		Projection:                uniforms.NewMatrix4(program, projectionLoc),
 		View:                      uniforms.NewMatrix4(program, viewLoc),
 		Model:                     uniforms.NewMatrix4(program, modelLoc),
