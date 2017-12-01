@@ -216,7 +216,11 @@ void main() {
 	} else if (renderMode == 3) {
 		outputColor = vec4(uv_out, 0, 1.0);
 	} else if (renderMode == 4) {
-		outputColor = texture(diffuse, uv_out);
+		vec4 diffuseColor = texture(diffuse, uv_out);
+		if (diffuseColor.a < 0.5) {
+			discard;
+		} 
+		outputColor = diffuseColor;
 	} 
 }
 ` + "\x00"
