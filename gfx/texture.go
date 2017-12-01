@@ -46,10 +46,12 @@ func fromPng(file string) (uint32, error) {
 	gl.GenTextures(1, &texture)
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, texture)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_LOD, 1)
+	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAX_LOD, 4)
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
 		0,
@@ -60,6 +62,7 @@ func fromPng(file string) (uint32, error) {
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
 		gl.Ptr(rgba.Pix))
+	gl.GenerateMipmap(gl.TEXTURE_2D)
 
 	return texture, nil
 }

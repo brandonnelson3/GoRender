@@ -121,7 +121,7 @@ type Terrain struct {
 }
 
 func NewTerrain() *Terrain {
-	diffuseTexture, err := gfx.LoadTexture("assets/crate1_diffuse.png")
+	diffuseTexture, err := gfx.LoadTexture("assets/sand.png")
 	if err != nil {
 		panic(err)
 	}

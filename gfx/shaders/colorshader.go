@@ -153,7 +153,7 @@ void main() {
 	
 	if (renderMode == 0 || renderMode == 5) {		
 		vec4 diffuseColor = texture(diffuse, uv_out);
-		if (diffuseColor.a != 1) {
+		if (diffuseColor.a < 0.5) {
 			discard;
 		} 
 		

@@ -36,8 +36,8 @@ uniform sampler2D diffuse;
 in vec2 uv_out;
 
 void main() {
-	vec4 color = texture(diffuse, uv_out);
-	if (color.a != 1) {
+	vec4 color = textureLod(diffuse, uv_out, 0);
+	if (color.a < 0.5) {
 		discard;
 	} 
 }` + "\x00"
