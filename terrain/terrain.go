@@ -42,7 +42,7 @@ func (c *cell) Update(colorShader *shaders.ColorShader) {
 func (c *cell) Render(colorShader *shaders.ColorShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		colorShader.Model.Set(mgl32.Ident4())
+		colorShader.Model.Set(mgl32.Translate3D(float32(c.x*cellsizep1+1), float32(c.y*cellsizep1+1), float32(c.z*cellsizep1+1)))
 		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
 		gl.BindVertexArray(0)
 	}
@@ -51,11 +51,12 @@ func (c *cell) Render(colorShader *shaders.ColorShader) {
 func (c *cell) RenderDepth(depthShader *shaders.DepthShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		depthShader.Model.Set(mgl32.Ident4())
+		depthShader.Model.Set(mgl32.Translate3D(float32(c.x*cellsizep1+1), float32(c.y*cellsizep1+1), float32(c.z*cellsizep1+1)))
 		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
 		gl.BindVertexArray(0)
 	}
 }
+
 func calculateNormal(pos1, pos2, pos3 mgl32.Vec3) mgl32.Vec3 {
 	a := pos2.Sub(pos1)
 	b := pos3.Sub(pos1)
