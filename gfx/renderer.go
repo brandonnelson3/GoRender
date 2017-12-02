@@ -152,6 +152,8 @@ func InitRenderer() {
 				UpdatePip(&csmDepthMaps[3], Window.GetNearFar(3))
 			case glfw.KeyPrintScreen:
 				Screenshot()
+			case glfw.KeyL:
+				AddPointLight(ActiveCamera.GetPosition().Add(ActiveCamera.GetForward().Mul(10)), whiteColor, 1.0, 30.0)
 			}
 		}
 	})
