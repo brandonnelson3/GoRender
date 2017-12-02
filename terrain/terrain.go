@@ -9,18 +9,19 @@ import (
 )
 
 const (
-	cellsize     = 64
+	cellsize     = uint32(64)
 	cellsizep1   = cellsize + 1
 	cellsizep1p2 = cellsizep1 + 2
 )
 
 type cell struct {
-	x, y, z int
+	x, y, z uint32
 
-	vao, vbo uint32
-	numVerts int32
+	vao, vbo, veb uint32
+	numIndices    int32
 
-	verts []gfx.Vertex
+	verts   []gfx.Vertex
+	indices []uint32
 }
 
 func (c *cell) Update(colorShader *shaders.ColorShader) {
@@ -30,8 +31,11 @@ func (c *cell) Update(colorShader *shaders.ColorShader) {
 		gl.GenBuffers(1, &c.vbo)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(c.verts)*8*4, gl.Ptr(c.verts), gl.STATIC_DRAW)
-
 		gfx.BindVertexAttributes(colorShader.Program())
+		gl.GenBuffers(1, &c.veb)
+		gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, c.veb)
+		gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(c.indices)*4, gl.Ptr(c.indices), gl.STATIC_DRAW)
+		gl.BindVertexArray(0)
 	}
 }
 
@@ -39,7 +43,8 @@ func (c *cell) Render(colorShader *shaders.ColorShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
 		colorShader.Model.Set(mgl32.Ident4())
-		gl.DrawArrays(gl.TRIANGLES, 0, c.numVerts)
+		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
+		gl.BindVertexArray(0)
 	}
 }
 
@@ -47,68 +52,82 @@ func (c *cell) RenderDepth(depthShader *shaders.DepthShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
 		depthShader.Model.Set(mgl32.Ident4())
-		gl.DrawArrays(gl.TRIANGLES, 0, c.numVerts)
+		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
+		gl.BindVertexArray(0)
 	}
 }
-
 func calculateNormal(pos1, pos2, pos3 mgl32.Vec3) mgl32.Vec3 {
 	a := pos2.Sub(pos1)
 	b := pos3.Sub(pos1)
 	return a.Cross(b)
 }
 
-func GenerateCell(perlin *perlin.Perlin, x, y, z int) *cell {
+func calculateIndice(x, z uint32) uint32 {
+	return z*cellsizep1 + x
+}
+
+func GenerateCell(perlin *perlin.Perlin, x, y, z uint32) *cell {
 	var grid [cellsizep1p2][cellsizep1p2]mgl32.Vec3
-	for xi := 0; xi < cellsizep1p2; xi++ {
-		for zi := 0; zi < cellsizep1p2; zi++ {
+	for xi := uint32(0); xi < cellsizep1p2; xi++ {
+		for zi := uint32(0); zi < cellsizep1p2; zi++ {
 			h := float32((perlin.Noise2D(float64(x*cellsize+xi)/10.0, float64(z*cellsize+zi)/10.0)+1)/2.0) * 4
 			grid[xi][zi] = mgl32.Vec3{float32(x*cellsize + xi), h, float32(z*cellsize + zi)}
 		}
 	}
 
 	var verts []gfx.Vertex
-	for xi := 2; xi <= cellsizep1; xi++ {
-		for zi := 2; zi <= cellsizep1; zi++ {
-			vec00 := grid[xi][zi]
-			vec01 := grid[xi][zi-1]
-			vec10 := grid[xi-1][zi]
-			vec11 := grid[xi-1][zi-1]
+	for xi := uint32(1); xi <= cellsizep1; xi++ {
+		for zi := uint32(1); zi <= cellsizep1; zi++ {
+			verts = append(verts, gfx.Vertex{grid[xi][zi], mgl32.Vec3{}, mgl32.Vec2{float32(xi) / 5.0, float32(zi) / 5.0}})
+		}
+	}
 
+	var indices []uint32
+	for zi := uint32(0); zi < cellsize; zi++ {
+		for xi := uint32(0); xi < cellsize; xi++ {
+			i1 := calculateIndice(xi, zi)
+			i2 := calculateIndice(xi+1, zi)
+			i3 := calculateIndice(xi, zi+1)
+			i4 := calculateIndice(xi+1, zi+1)
 			if xi%2 == 0 && zi%2 == 0 || xi%2 == 1 && zi%2 == 1 {
-
-				normal1 := calculateNormal(vec00, vec01, vec10)
-				normal2 := calculateNormal(vec10, vec01, vec11)
-
-				verts = append(verts,
-					gfx.Vertex{vec00, normal1, mgl32.Vec2{0.0, 0.0}},
-					gfx.Vertex{vec01, normal1, mgl32.Vec2{0.0, 1.0}},
-					gfx.Vertex{vec10, normal1, mgl32.Vec2{1.0, 0.0}},
-					gfx.Vertex{vec10, normal2, mgl32.Vec2{1.0, 0.0}},
-					gfx.Vertex{vec01, normal2, mgl32.Vec2{0.0, 1.0}},
-					gfx.Vertex{vec11, normal2, mgl32.Vec2{1.0, 1.0}},
-				)
+				// 1-----2
+				// |   / |
+				// | /   |
+				// 3-----4
+				indices = append(indices, i3, i1, i2, i2, i4, i3)
 			} else {
-				normal1 := calculateNormal(vec00, vec11, vec10)
-				normal2 := calculateNormal(vec00, vec01, vec11)
-
-				verts = append(verts,
-					gfx.Vertex{vec00, normal1, mgl32.Vec2{0.0, 0.0}},
-					gfx.Vertex{vec11, normal1, mgl32.Vec2{1.0, 1.0}},
-					gfx.Vertex{vec10, normal1, mgl32.Vec2{1.0, 0.0}},
-					gfx.Vertex{vec00, normal2, mgl32.Vec2{0.0, 0.0}},
-					gfx.Vertex{vec01, normal2, mgl32.Vec2{0.0, 1.0}},
-					gfx.Vertex{vec11, normal2, mgl32.Vec2{1.0, 1.0}},
-				)
+				// 1-----2
+				// | \   |
+				// |   \ |
+				// 3-----4
+				indices = append(indices, i1, i2, i4, i4, i3, i1)
 			}
 		}
 	}
 
+	for i := 0; i < len(indices); i += 3 {
+		v1 := &verts[indices[i]]
+		v2 := &verts[indices[i+1]]
+		v3 := &verts[indices[i+2]]
+
+		n := calculateNormal(v1.Vert, v2.Vert, v3.Vert)
+
+		v1.Norm = v1.Norm.Add(n)
+		v2.Norm = v2.Norm.Add(n)
+		v3.Norm = v3.Norm.Add(n)
+	}
+
+	for i, v := range verts {
+		verts[i].Norm = v.Norm.Normalize()
+	}
+
 	return &cell{
-		x:        x,
-		y:        y,
-		z:        z,
-		verts:    verts,
-		numVerts: int32(len(verts)),
+		x:          x,
+		y:          y,
+		z:          z,
+		verts:      verts,
+		indices:    indices,
+		numIndices: int32(len(indices)),
 	}
 }
 
