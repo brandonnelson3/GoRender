@@ -148,7 +148,50 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 	var verts []gfx.Vertex
 	for x := int32(1); x <= cellsizep1; x++ {
 		for z := int32(1); z <= cellsizep1; z++ {
-			verts = append(verts, gfx.Vertex{grid[x][z], mgl32.Vec3{}, mgl32.Vec2{float32(x) / 5.0, float32(z) / 5.0}})
+			n := mgl32.Vec3{}
+			if x%2 == 0 && z%2 == 0 || x%2 == 1 && z%2 == 1 {
+				//   / | \
+				// / 1 | 2 \
+				// ----V----
+				// \ 3 | 4 /
+				//   \ | /
+				v := grid[x][z]
+				u := grid[x][z+1]
+				d := grid[x][z-1]
+				l := grid[x-1][z]
+				r := grid[x+1][z]
+				n1 := calculateNormal(l, u, v)
+				n2 := calculateNormal(u, r, v)
+				n3 := calculateNormal(r, d, v)
+				n4 := calculateNormal(d, l, v)
+				n = n1.Add(n2).Add(n3).Add(n4)
+			} else {
+				// \ 1 | 2 /
+				// 8 \ | / 3
+				// ----V----
+				// 7 / | \ 4
+				// / 6 | 5 \
+				v := grid[x][z]
+				u := grid[x][z+1]
+				d := grid[x][z-1]
+				l := grid[x-1][z]
+				r := grid[x+1][z]
+				ul := grid[x-1][z+1]
+				ur := grid[x+1][z+1]
+				dl := grid[x-1][z-1]
+				dr := grid[x+1][z-1]
+				n1 := calculateNormal(ul, u, v)
+				n2 := calculateNormal(u, ur, v)
+				n3 := calculateNormal(ur, u, v)
+				n4 := calculateNormal(r, dr, v)
+				n5 := calculateNormal(dr, d, v)
+				n6 := calculateNormal(d, dl, v)
+				n7 := calculateNormal(dl, l, v)
+				n8 := calculateNormal(l, ul, v)
+				n = n1.Add(n2).Add(n3).Add(n4).Add(n5).Add(n6).Add(n7).Add(n8)
+			}
+
+			verts = append(verts, gfx.Vertex{grid[x][z], n.Normalize(), mgl32.Vec2{float32(x) / 5.0, float32(z) / 5.0}})
 		}
 	}
 
@@ -173,22 +216,6 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 				indices = append(indices, i1, i2, i4, i4, i3, i1)
 			}
 		}
-	}
-
-	for i := 0; i < len(indices); i += 3 {
-		v1 := &verts[indices[i]]
-		v2 := &verts[indices[i+1]]
-		v3 := &verts[indices[i+2]]
-
-		n := calculateNormal(v1.Vert, v2.Vert, v3.Vert)
-
-		v1.Norm = v1.Norm.Add(n)
-		v2.Norm = v2.Norm.Add(n)
-		v3.Norm = v3.Norm.Add(n)
-	}
-
-	for i, v := range verts {
-		verts[i].Norm = v.Norm.Normalize()
 	}
 
 	return &cell{
