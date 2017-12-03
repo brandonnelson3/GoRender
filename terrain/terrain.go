@@ -149,17 +149,17 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 	for x := int32(1); x <= cellsizep1; x++ {
 		for z := int32(1); z <= cellsizep1; z++ {
 			n := mgl32.Vec3{}
+			v := grid[x][z]
+			u := grid[x][z+1]
+			d := grid[x][z-1]
+			l := grid[x-1][z]
+			r := grid[x+1][z]
 			if x%2 == 0 && z%2 == 0 || x%2 == 1 && z%2 == 1 {
 				//   / | \
 				// / 1 | 2 \
 				// ----V----
 				// \ 3 | 4 /
 				//   \ | /
-				v := grid[x][z]
-				u := grid[x][z+1]
-				d := grid[x][z-1]
-				l := grid[x-1][z]
-				r := grid[x+1][z]
 				n1 := calculateNormal(l, u, v)
 				n2 := calculateNormal(u, r, v)
 				n3 := calculateNormal(r, d, v)
@@ -171,11 +171,6 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 				// ----V----
 				// 7 / | \ 4
 				// / 6 | 5 \
-				v := grid[x][z]
-				u := grid[x][z+1]
-				d := grid[x][z-1]
-				l := grid[x-1][z]
-				r := grid[x+1][z]
 				ul := grid[x-1][z+1]
 				ur := grid[x+1][z+1]
 				dl := grid[x-1][z-1]
