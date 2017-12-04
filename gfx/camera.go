@@ -63,12 +63,11 @@ func InitCameras() {
 	var vao uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
-
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-
 	BindLineVertexAttributes(Renderer.lineShader.Program())
+	gl.BindVertexArray(0)
 
 	FirstPerson = &camera{
 		position:                       mgl32.Vec3{0, 9, 0},
@@ -292,6 +291,7 @@ func (c *camera) Update(d float64) {
 		gl.BindVertexArray(c.vao)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*6*4, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
+		gl.BindVertexArray(0)
 	}
 }
 
@@ -360,4 +360,6 @@ func (c *camera) RenderFrustum() {
 	if c.renderFrustum {
 		gl.DrawArrays(gl.LINES, 150, 24)
 	}
+
+	gl.BindVertexArray(0)
 }

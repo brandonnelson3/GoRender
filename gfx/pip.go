@@ -49,6 +49,7 @@ func InitPip() {
 	gl.BindBuffer(gl.ARRAY_BUFFER, planeSquareVbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(planeVertices)*4*4, gl.Ptr(planeVertices), gl.STATIC_DRAW)
 	BindPipVertexAttributes(pipShader.Program())
+	gl.BindVertexArray(0)
 
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
 		pressedKeys := m.Data1.([]glfw.Key)
@@ -79,6 +80,7 @@ func RenderPip() {
 		gl.DrawArrays(gl.TRIANGLES, 0, 2*3)
 		gl.ActiveTexture(gl.TEXTURE4)
 		gl.BindTexture(gl.TEXTURE_2D, 0)
+		gl.BindVertexArray(0)
 		gl.Enable(gl.DEPTH_TEST)
 	}
 }

@@ -27,6 +27,8 @@ func NewSky() (*Sky, error) {
 
 	BindSkyVertexAttributes(skyShader.Program())
 
+	gl.BindVertexArray(0)
+
 	return &Sky{
 		vao:       vao,
 		vbo:       vbo,
@@ -44,6 +46,7 @@ func (sky *Sky) Render() {
 	sky.skyShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	gl.BindVertexArray(sky.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, 2*3)
+	gl.BindVertexArray(0)
 	gl.Enable(gl.DEPTH_TEST)
 }
 
@@ -66,4 +69,5 @@ func (sky *Sky) Update() {
 	gl.BindVertexArray(sky.vao)
 	gl.BindBuffer(gl.ARRAY_BUFFER, sky.vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*3*4, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
+	gl.BindVertexArray(0)
 }

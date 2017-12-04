@@ -42,6 +42,8 @@ func NewVAORenderable(verticies []Vertex, diffuse uint32) *VAORenderable {
 
 	BindVertexAttributes(Renderer.colorShader.Program())
 
+	gl.BindVertexArray(0)
+
 	return &VAORenderable{
 		vao:         vao,
 		vbo:         vbo,
@@ -65,6 +67,8 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *VAO
 	gl.BufferData(gl.ARRAY_BUFFER, len(verticies)*8*4, gl.Ptr(verticies), gl.STATIC_DRAW)
 
 	BindVertexAttributes(Renderer.colorShader.Program())
+
+	gl.BindVertexArray(0)
 
 	return &VAORenderable{
 		vao:         vao,
