@@ -56,6 +56,7 @@ func InitRenderer() {
 	gl.PointSize(8.0)
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 	gl.CullFace(gl.BACK)
+	gl.PolygonOffset(2.5, 1.0)
 
 	ls, err := shaders.NewLineShader()
 	if err != nil {
@@ -118,6 +119,17 @@ func InitRenderer() {
 
 	UpdatePip(&csmDepthMaps[0], Window.GetNearFar(0))
 
+	Renderer = r{
+		lineShader:         ls,
+		depthShader:        ds,
+		lightCullingShader: lcs,
+		colorShader:        cs,
+		depthMapFBO:        depthMapFBO,
+		depthMap:           depthMap,
+		csmDepthMapFBO:     csmDepthMapFBO,
+		csmDepthMaps:       csmDepthMaps,
+	}
+
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
 		pressedKeys := m.Data1.([]glfw.Key)
 		for _, key := range pressedKeys {
@@ -157,17 +169,6 @@ func InitRenderer() {
 			}
 		}
 	})
-
-	Renderer = r{
-		lineShader:         ls,
-		depthShader:        ds,
-		lightCullingShader: lcs,
-		colorShader:        cs,
-		depthMapFBO:        depthMapFBO,
-		depthMap:           depthMap,
-		csmDepthMapFBO:     csmDepthMapFBO,
-		csmDepthMaps:       csmDepthMaps,
-	}
 }
 
 // getNumTilesX returns back the number of tiles in each the X dimension that are needed for the current window size.
@@ -193,6 +194,7 @@ func (renderer *r) Update(updateables []Updateable) {
 
 func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Disable(gl.CULL_FACE)
+	gl.Enable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 1: Depth Pass for each cascade for shadowing.
 	gl.Viewport(0, 0, shadowMapSize, shadowMapSize)
@@ -209,6 +211,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	}
 
 	gl.Enable(gl.CULL_FACE)
+	gl.Disable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 2: Depth Pass for pointlight culling
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))

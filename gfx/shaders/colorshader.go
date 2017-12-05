@@ -93,9 +93,6 @@ uniform sampler2D shadowMap2;
 uniform sampler2D shadowMap3;
 uniform sampler2D shadowMap4;
 
-// Portion of the depth to consider to prevent shadow acne. This is proportional to the depth, to prevent peter panning.
-const float shadowBias = 0.9995;
-
 in vec4 position;
 in vec3 worldPosition;
 in vec3 norm_out;
@@ -134,7 +131,7 @@ float getShadowFactor(int index, vec3 projCoords)
 			} else {
 				shadowMapDepth = texture(shadowMap4, projCoords.xy + vec2(i,j) * texelSize).x;
 			}			
-			if (linearize(currentDepth*shadowBias) > linearize(shadowMapDepth)) {
+			if (linearize(currentDepth) > linearize(shadowMapDepth)) {
 				shadowFactor -= 0.1f;
 			}
 		}
