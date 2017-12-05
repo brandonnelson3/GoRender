@@ -70,7 +70,7 @@ func InitCameras() {
 	gl.BindVertexArray(0)
 
 	FirstPerson = &camera{
-		position:                       mgl32.Vec3{0, 9, 0},
+		position:                       mgl32.Vec3{0, 40, 0},
 		horizontalAngle:                0,
 		verticalAngle:                  0,
 		sensitivity:                    0.001,
@@ -89,7 +89,7 @@ func InitCameras() {
 	}
 
 	ThirdPerson = &camera{
-		position:        mgl32.Vec3{-10, 10, -10},
+		position:        mgl32.Vec3{-10, 60, -10},
 		horizontalAngle: -pi4,
 		verticalAngle:   -pi4,
 		sensitivity:     0.001,
