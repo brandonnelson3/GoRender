@@ -12,14 +12,12 @@ import (
 )
 
 const (
-	cellsize     = int32(64)
+	cellsize     = int32(128)
 	cellsizep1   = cellsize + 1
 	cellsizep1p2 = cellsizep1 + 2
 
 	worldSize   = 6
 	worldSizem1 = worldSize - 1
-	worldSizet2 = worldSize * 2
-	worldTotal  = (2 * worldSize) * (2 * worldSize) * (2 * worldSize)
 )
 
 var (
@@ -62,7 +60,7 @@ func (c *cell) Update(colorShader *shaders.ColorShader) {
 func (c *cell) Render(colorShader *shaders.ColorShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		colorShader.Model.Set(mgl32.Translate3D(float32(c.id.x*cellsize+1), 0, float32(c.id.z*cellsize+1)))
+		colorShader.Model.Set(mgl32.Translate3D(float32(c.id.x*cellsize), 0, float32(c.id.z*cellsize)))
 		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
 		gl.BindVertexArray(0)
 	}
@@ -71,7 +69,7 @@ func (c *cell) Render(colorShader *shaders.ColorShader) {
 func (c *cell) RenderDepth(depthShader *shaders.DepthShader) {
 	if c.vao != 0 {
 		gl.BindVertexArray(c.vao)
-		depthShader.Model.Set(mgl32.Translate3D(float32(c.id.x*cellsize+1), 0, float32(c.id.z*cellsize+1)))
+		depthShader.Model.Set(mgl32.Translate3D(float32(c.id.x*cellsize), 0, float32(c.id.z*cellsize)))
 		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
 		gl.BindVertexArray(0)
 	}
@@ -98,11 +96,9 @@ func NewTerrain() *Terrain {
 		diffuse: diffuseTexture,
 	}
 
-	for x := int32(1 - worldSize); x <= worldSize; x++ {
-		for y := int32(1 - worldSize); y <= worldSize; y++ {
-			for z := int32(1 - worldSize); z <= worldSize; z++ {
-				go t.generate(x, z)
-			}
+	for x := int32(-worldSize); x <= worldSize; x++ {
+		for z := int32(-worldSize); z <= worldSize; z++ {
+			go t.generate(x, z)
 		}
 	}
 
@@ -222,7 +218,7 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 }
 
 func (t *Terrain) generate(x, z int32) {
-	lastCell := cellId{-1, -1}
+	lastCell := cellId{-1000000000, -1000000000}
 	for {
 		// No point in checking more often then every 100ms.
 		<-time.After(100 * time.Millisecond)
