@@ -52,6 +52,14 @@ func (window *w) RecenterCursor() {
 	window.SetCursorPos(float64(window.Width)/2, float64(window.Height)/2)
 }
 
+// Resize updates the Width and Height fields used by the renderer.
+// For render-test mode this can be called on a hidden window to change the
+// effective resolution without actually resizing the OS window.
+func (window *w) Resize(width, height int32) {
+	window.Width = uint32(width)
+	window.Height = uint32(height)
+}
+
 // GetProjection returns the projection matrix.
 func (window *w) GetProjection() mgl32.Mat4 {
 	return mgl32.Perspective(mgl32.DegToRad(window.fieldOfViewDegrees), float32(window.Width)/float32(window.Height), window.nearPlane, window.farPlane)

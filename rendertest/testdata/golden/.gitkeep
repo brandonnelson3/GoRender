@@ -1,0 +1,3 @@
+# Golden reference images are stored here.
+# Run: go run . -rendertest && go test ./rendertest/... -update
+# to generate/update them.

@@ -51,6 +51,14 @@ func UpdateDirectionalLight(f func(dL DirectionalLight) DirectionalLight) {
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
 }
 
+// ResetDirectionalLight replaces the directional light with the given values.
+// It is intended for deterministic setup in render-test mode.
+func ResetDirectionalLight(color mgl32.Vec3, brightness float32, direction mgl32.Vec3) {
+	UpdateDirectionalLight(func(_ DirectionalLight) DirectionalLight {
+		return DirectionalLight{Color: color, Brightness: brightness, Direction: direction}
+	})
+}
+
 // GetDirectionalLightBuffer retrieves the private directionalLightBuffer variable.
 func GetDirectionalLightBuffer() uint32 {
 	return directionalLightBuffer

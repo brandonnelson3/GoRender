@@ -43,6 +43,11 @@ type r struct {
 	csmDepthMaps   [NumberOfCascades]uint32
 
 	depthMapFBO, depthMap uint32
+
+	// TargetFramebuffer is the framebuffer the color pass renders into.
+	// Zero (the default) means the window's default backbuffer.
+	// Set to an offscreen FBO handle for render-test captures.
+	TargetFramebuffer uint32
 }
 
 // InitRenderer instanciates the global Renderer instance.
@@ -236,7 +241,8 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.UseProgram(0)
 
 	// Step 4: Normal pass
-	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.TargetFramebuffer)
+	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	sky.Render()
 	renderer.colorShader.Use()

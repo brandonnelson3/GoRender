@@ -300,6 +300,15 @@ func (c *camera) GetPosition() mgl32.Vec3 {
 	return c.position
 }
 
+// SetPose sets the camera's position and angles directly.
+// horizontalAngle rotates around Y (yaw), verticalAngle tilts up/down (pitch).
+// This is intended for deterministic setup in render-test mode.
+func (c *camera) SetPose(position mgl32.Vec3, horizontalAngle, verticalAngle float32) {
+	c.position = position
+	c.horizontalAngle = horizontalAngle
+	c.verticalAngle = verticalAngle
+}
+
 // GetForward returns the forward unit vector for this camera.
 func (c *camera) GetForward() mgl32.Vec3 {
 	return mgl32.Rotate3DY(c.horizontalAngle).Mul3x1(mgl32.Rotate3DZ(c.verticalAngle).Mul3x1((mgl32.Vec3{1, 0, 0})))
