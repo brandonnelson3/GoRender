@@ -11,11 +11,7 @@ import (
 	"github.com/go-gl/gl/v4.5-core/gl"
 )
 
-const (
-	pngExt = ".png"
-	jpgExt = ".jpg"
-	tgaExt = ".tga"
-)
+const pngExt = ".png"
 
 // LoadTexture loads the texture in the provided file, based on the file extension.
 func LoadTexture(file string) (uint32, error) {

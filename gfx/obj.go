@@ -17,8 +17,7 @@ type material struct {
 
 type group struct {
 	start, end int32
-
-	mat material
+	mat        material
 }
 
 // Object is a wrapper around the contents of a model file.
@@ -193,12 +192,9 @@ func parseVec2Line(format, line string) (mgl32.Vec2, error) {
 	return result, nil
 }
 
-func parseFaceLine(format, line string) (uint32, uint32, uint32, uint32, uint32, uint32, uint32, uint32, uint32, error) {
-	var v1, n1, t1, v2, n2, t2, v3, n3, t3 uint32
-	if _, err := fmt.Sscanf(line, format, &v1, &t1, &n1, &v2, &t2, &n2, &v3, &t3, &n3); err != nil {
-		return v1, t1, n1, v2, t2, n2, v3, t3, n3, err
-	}
-	return v1, t1, n1, v2, t2, n2, v3, t3, n3, nil
+func parseFaceLine(format, line string) (v1, t1, n1, v2, t2, n2, v3, t3, n3 uint32, err error) {
+	_, err = fmt.Sscanf(line, format, &v1, &t1, &n1, &v2, &t2, &n2, &v3, &t3, &n3)
+	return
 }
 
 func loadMtlFile(file string) (map[string]material, error) {

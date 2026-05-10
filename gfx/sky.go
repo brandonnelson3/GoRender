@@ -52,12 +52,12 @@ func (sky *Sky) Render() {
 
 func (sky *Sky) Update() {
 	vertices := []mgl32.Vec3{
-		mgl32.Vec3{-1, 1, .1},
-		mgl32.Vec3{1, -1, .1},
-		mgl32.Vec3{1, 1, .1},
-		mgl32.Vec3{-1, -1, .1},
-		mgl32.Vec3{1, -1, .1},
-		mgl32.Vec3{-1, 1, .1},
+		{-1, 1, .1},
+		{1, -1, .1},
+		{1, 1, .1},
+		{-1, -1, .1},
+		{1, -1, .1},
+		{-1, 1, .1},
 	}
 
 	view := mgl32.LookAtV(mgl32.Vec3{}, ActiveCamera.GetForward(), mgl32.Vec3{0, 1, 0})

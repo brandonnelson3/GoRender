@@ -19,7 +19,7 @@ func Screenshot() {
 	path := filepath.Join(screenshotFilePath, time.Now().Format(screenshotFileFormat)+".jpg")
 	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		os.MkdirAll(dir, 755)
+		os.MkdirAll(dir, 0755)
 	}
 	screenshot := image.NewRGBA(image.Rect(0, 0, int(Window.Width), int(Window.Height)))
 	gl.ReadPixels(0, 0, int32(Window.Width), int32(Window.Height), gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(screenshot.Pix))

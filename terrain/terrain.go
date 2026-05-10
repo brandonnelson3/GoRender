@@ -4,11 +4,12 @@ import (
 	"sync"
 	"time"
 
-	perlin "github.com/aquilax/go-perlin"
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"github.com/go-gl/mathgl/mgl32"
+
+	perlin "github.com/aquilax/go-perlin"
 )
 
 const (
@@ -134,8 +135,8 @@ func isCellInWorld(cell, centroidCell cellId) bool {
 
 func (t *Terrain) GenerateCell(id cellId) *cell {
 	var grid [cellsizep1p2][cellsizep1p2]mgl32.Vec3
-	for x := int32(0); x < cellsizep1p2; x++ {
-		for z := int32(0); z < cellsizep1p2; z++ {
+	for x := range cellsizep1p2 {
+		for z := range cellsizep1p2 {
 			h := float32((t.noise.Noise2D(float64(id.x*cellsize+x)/100.0, float64(id.z*cellsize+z)/100.0)+1)/2.0) * 50
 			grid[x][z] = mgl32.Vec3{float32(x), h, float32(z)}
 		}
@@ -181,14 +182,13 @@ func (t *Terrain) GenerateCell(id cellId) *cell {
 				n8 := calculateNormal(l, ul, v)
 				n = n1.Add(n2).Add(n3).Add(n4).Add(n5).Add(n6).Add(n7).Add(n8)
 			}
-
-			verts = append(verts, gfx.Vertex{grid[x][z], n.Normalize(), mgl32.Vec2{float32(x) / 5.0, float32(z) / 5.0}})
+			verts = append(verts, gfx.Vertex{Vert: grid[x][z], Norm: n.Normalize(), UV: mgl32.Vec2{float32(x) / 5.0, float32(z) / 5.0}})
 		}
 	}
 
 	var indices []uint32
-	for z := uint32(0); z < uint32(cellsize); z++ {
-		for x := uint32(0); x < uint32(cellsize); x++ {
+	for z := range uint32(cellsize) {
+		for x := range uint32(cellsize) {
 			i1 := calculateIndice(x, z)
 			i2 := calculateIndice(x+1, z)
 			i3 := calculateIndice(x, z+1)

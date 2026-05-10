@@ -199,14 +199,14 @@ func (c *camera) Update(d float64) {
 	}
 	if c == FirstPerson {
 		cornerVertices := []mgl32.Vec3{
-			mgl32.Vec3{-1, 1, -1},
-			mgl32.Vec3{1, 1, -1},
-			mgl32.Vec3{1, -1, -1},
-			mgl32.Vec3{-1, -1, -1},
-			mgl32.Vec3{-1, 1, 1},
-			mgl32.Vec3{1, 1, 1},
-			mgl32.Vec3{1, -1, 1},
-			mgl32.Vec3{-1, -1, 1},
+			{-1, 1, -1},
+			{1, 1, -1},
+			{1, -1, -1},
+			{-1, -1, -1},
+			{-1, 1, 1},
+			{1, 1, 1},
+			{1, -1, 1},
+			{-1, -1, 1},
 		}
 
 		lineIndices := []int{
@@ -219,7 +219,7 @@ func (c *camera) Update(d float64) {
 		}
 
 		vertices := []LineVertex{}
-		for j := 0; j < NumberOfCascades; j++ {
+		for j := range NumberOfCascades {
 			lightViewProjection := Window.GetShadowCascadePerspectiveProjection(j).Mul4(c.GetView()).Transpose().Inv()
 
 			cascadeCornerVertices := [8]mgl32.Vec3{}

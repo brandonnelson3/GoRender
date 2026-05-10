@@ -13,8 +13,8 @@ var (
 type Message struct {
 	System string
 	Type   string
-	Data1  interface{}
-	Data2  interface{}
+	Data1  any
+	Data2  any
 }
 
 // MessageHandler is any function which can be registered to receieve messages.
@@ -24,7 +24,11 @@ type MessageHandler func(m *Message)
 func SendSync(m *Message) {
 	mu.Lock()
 	defer mu.Unlock()
-	for _, h := range typeHandlers[m.Type] {
+	h, ok := typeHandlers[m.Type]
+	if !ok {
+		return
+	}
+	for _, h := range h {
 		h(m)
 	}
 }

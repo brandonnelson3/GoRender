@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -20,7 +19,7 @@ func Load(path string) (io.Reader, error) {
 		return nil, fmt.Errorf("file \"%s\" not found on disk: %v", path, err)
 	}
 	defer file.Close()
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
 	}
