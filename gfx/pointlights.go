@@ -59,6 +59,20 @@ func InitPointLights() {
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
 }
 
+// ResetPointLights clears all point lights from the scene.
+// Intended for render-test scenes that want full control over lighting.
+func ResetPointLights() {
+	mu.Lock()
+	PointLights = [MaximumPointLights]PointLight{}
+	numPointLights = 0
+	nextPointLightIndex = 0
+	mu.Unlock()
+
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, lightBuffer)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(&PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
+}
+
 // GetNumPointLights returns the number of PointLights that are currently in the scene.
 func GetNumPointLights() uint32 {
 	return numPointLights

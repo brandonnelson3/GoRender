@@ -161,8 +161,9 @@ func runRenderTests() {
 		// viewport/projection calculation (depth pass, light culling, etc.) is correct.
 		gfx.Window.Resize(scene.Width, scene.Height)
 
-		// Configure camera, lighting, etc. for this scene.
-		scene.Setup()
+		// Configure camera, lighting, objects for this scene.
+		// Setup also returns the scene's renderables.
+		renderables := scene.Setup()
 
 		// Advance the camera one tick so shadow matrices are computed.
 		gfx.FirstPerson.Update(0)
@@ -174,7 +175,7 @@ func runRenderTests() {
 		// Render() hardcodes gl.BindFramebuffer(0) for the normal pass —
 		// TargetFramebuffer overrides that binding.
 		gfx.Renderer.TargetFramebuffer = fbo.Handle()
-		gfx.Renderer.Render(sky, nil)
+		gfx.Renderer.Render(sky, renderables)
 		gfx.Renderer.TargetFramebuffer = 0
 
 		// Flush so all GPU commands are complete before reading.
