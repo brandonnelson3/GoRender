@@ -65,3 +65,20 @@ func BindPipVertexAttributes(s uint32) {
 	gl.EnableVertexAttribArray(uvAttrib)
 	gl.VertexAttribPointer(uvAttrib, 2, gl.FLOAT, false, 4*4, gl.PtrOffset(8))
 }
+
+// ShellVertex is a Vertex for the frustum shell.
+type ShellVertex struct {
+	X, Y, Z float32
+	U, V    float32
+}
+
+// BindShellVertexAttributes binds the attributes per vertex.
+func BindShellVertexAttributes(s uint32) {
+	vertAttrib := uint32(gl.GetAttribLocation(s, gl.Str("vert\x00")))
+	gl.EnableVertexAttribArray(vertAttrib)
+	gl.VertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 5*4, gl.PtrOffset(0))
+	uvAttrib := uint32(gl.GetAttribLocation(s, gl.Str("uv\x00")))
+	gl.EnableVertexAttribArray(uvAttrib)
+	gl.VertexAttribPointer(uvAttrib, 2, gl.FLOAT, false, 5*4, gl.PtrOffset(12))
+}
+

@@ -329,9 +329,9 @@ func setupFrustumLensCloseup() []gfx.Renderable {
 	// ThirdPerson: 4 units right of FP + 1 unit up, looking back at FP.
 	const sideStep = float32(4)
 	tpPos := mgl32.Vec3{
-		9 + sideStep*float32(math.Sin(float64(fpHAngle))),  // right on X
+		9 + sideStep*float32(math.Sin(float64(fpHAngle))), // right on X
 		4 + 1,
-		9 + sideStep*float32(math.Cos(float64(fpHAngle))),  // right on Z
+		9 + sideStep*float32(math.Cos(float64(fpHAngle))), // right on Z
 	}
 	gfx.ThirdPerson.SetPose(tpPos, float32(5*math.Pi/4), -0.15)
 	gfx.ActiveCamera = gfx.ThirdPerson

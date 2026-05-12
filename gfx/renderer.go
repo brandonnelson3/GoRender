@@ -39,6 +39,7 @@ type r struct {
 	depthShader        *shaders.DepthShader
 	lightCullingShader *shaders.LightCullingShader
 	colorShader        *shaders.ColorShader
+	frustumShader      *shaders.FrustumShader
 
 	csmDepthMapFBO uint32
 	csmDepthMaps   [NumberOfCascades]uint32
@@ -82,6 +83,11 @@ func InitRenderer() {
 	cs, err := shaders.NewColorShader()
 	if err != nil {
 		log.Fatalf("Failed to compile ColorShader: %v", err)
+	}
+
+	fs, err := shaders.NewFrustumShader()
+	if err != nil {
+		log.Fatalf("Failed to compile FrustumShader: %v", err)
 	}
 
 	var depthMapFBO uint32
@@ -130,6 +136,7 @@ func InitRenderer() {
 		depthShader:        ds,
 		lightCullingShader: lcs,
 		colorShader:        cs,
+		frustumShader:      fs,
 		depthMapFBO:        depthMapFBO,
 		depthMap:           depthMap,
 		csmDepthMapFBO:     csmDepthMapFBO,

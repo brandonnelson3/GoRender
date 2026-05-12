@@ -52,6 +52,8 @@ type camera struct {
 
 	// Frustum rendering done internally without Renderable.
 	vao, vbo                       uint32
+	shellVAO, shellVBO             uint32
+	shellTexture                   uint32
 	renderFrustum                  bool
 	renderCascade1                 bool
 	renderCascade2                 bool
@@ -72,7 +74,21 @@ func InitCameras() {
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	BindLineVertexAttributes(Renderer.lineShader.Program())
+
+	var shellVAO uint32
+	gl.GenVertexArrays(1, &shellVAO)
+	gl.BindVertexArray(shellVAO)
+	var shellVBO uint32
+	gl.GenBuffers(1, &shellVBO)
+	gl.BindBuffer(gl.ARRAY_BUFFER, shellVBO)
+	BindShellVertexAttributes(Renderer.frustumShader.Program())
+
 	gl.BindVertexArray(0)
+
+	shellTexture, err := LoadTexture("assets/crosshatch.png")
+	if err != nil {
+		fmt.Printf("Warning: failed to load frustum crosshatch texture: %v\n", err)
+	}
 
 	FirstPerson = &camera{
 		position:                       mgl32.Vec3{0, 40, 0},
@@ -82,6 +98,9 @@ func InitCameras() {
 		speed:                          20,
 		vao:                            vao,
 		vbo:                            vbo,
+		shellVAO:                       shellVAO,
+		shellVBO:                       shellVBO,
+		shellTexture:                   shellTexture,
 		renderCascade1:                 false,
 		renderCascade2:                 false,
 		renderCascade3:                 false,
@@ -283,19 +302,49 @@ func (c *camera) Update(d float64) {
 			}
 		}
 
-		lightViewProjection := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv().Transpose()
-		cascadeCornerVertices := [8]mgl32.Vec3{}
+		// Calculate corners for the main view frustum
+		// Using the same Transpose().Inv() logic as cascades for consistency
+		projViewInvT := Window.GetProjection().Mul4(c.GetView()).Transpose().Inv()
+		mainFrustumCorners := [8]mgl32.Vec3{}
 		for i, v := range cornerVertices {
-			temp := lightViewProjection.Mul4x1(v.Vec4(1))
-			cascadeCornerVertices[i] = mgl32.Vec3{temp.X() / temp.W(), temp.Y() / temp.W(), temp.Z() / temp.W()}
+			mainFrustumCorners[i] = transformTransposed(v, projViewInvT)
 		}
-		// Note this is using the second "value" of the lineIndices index.
+
+		// Update main frustum wireframe lines
 		for _, i := range lineIndices {
-			vertices = append(vertices, LineVertex{cascadeCornerVertices[i], whiteColor})
+			vertices = append(vertices, LineVertex{mainFrustumCorners[i], whiteColor})
 		}
 		gl.BindVertexArray(c.vao)
 		gl.BindBuffer(gl.ARRAY_BUFFER, c.vbo)
 		gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*6*4, gl.Ptr(vertices), gl.DYNAMIC_DRAW)
+
+		// Update semi-transparent shell (triangles)
+		shellVertices := []ShellVertex{}
+		quads := [][]int{
+			{0, 1, 2, 3}, // Near
+			{5, 4, 7, 6}, // Far
+			{0, 4, 5, 1}, // Top
+			{3, 2, 6, 7}, // Bottom
+			{4, 0, 3, 7}, // Left
+			{1, 5, 6, 2}, // Right
+		}
+
+		for _, q := range quads {
+			v0, v1, v2, v3 := mainFrustumCorners[q[0]], mainFrustumCorners[q[1]], mainFrustumCorners[q[2]], mainFrustumCorners[q[3]]
+			// Triangle 1
+			shellVertices = append(shellVertices, ShellVertex{v0.X(), v0.Y(), v0.Z(), 0, 0})
+			shellVertices = append(shellVertices, ShellVertex{v1.X(), v1.Y(), v1.Z(), 5, 0})
+			shellVertices = append(shellVertices, ShellVertex{v2.X(), v2.Y(), v2.Z(), 5, 5})
+			// Triangle 2
+			shellVertices = append(shellVertices, ShellVertex{v2.X(), v2.Y(), v2.Z(), 5, 5})
+			shellVertices = append(shellVertices, ShellVertex{v3.X(), v3.Y(), v3.Z(), 0, 5})
+			shellVertices = append(shellVertices, ShellVertex{v0.X(), v0.Y(), v0.Z(), 0, 0})
+		}
+
+		gl.BindVertexArray(c.shellVAO)
+		gl.BindBuffer(gl.ARRAY_BUFFER, c.shellVBO)
+		gl.BufferData(gl.ARRAY_BUFFER, len(shellVertices)*5*4, gl.Ptr(shellVertices), gl.DYNAMIC_DRAW)
+
 		gl.BindVertexArray(0)
 	}
 }
@@ -400,6 +449,24 @@ func (c *camera) RenderFrustum() {
 		// + 1 eye + 24 shadow-frustum lines). The camera's own frustum is appended
 		// after all cascade data, so its start offset is NumberOfCascades * 50.
 		gl.DrawArrays(gl.LINES, int32(NumberOfCascades*50), 24)
+
+		Renderer.frustumShader.Use()
+		Renderer.frustumShader.View.Set(ThirdPerson.GetView())
+		Renderer.frustumShader.Projection.Set(Window.GetProjection())
+		Renderer.frustumShader.Color.Set(mgl32.Vec3{0.4, 0.7, 1.0}) // Light blue tint
+		Renderer.frustumShader.Alpha.Set(0.6)                      // More visible
+
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+		gl.DepthMask(false) // Don't write to depth buffer for transparent shell
+		gl.Disable(gl.CULL_FACE)
+
+		gl.BindVertexArray(c.shellVAO)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36) // 6 faces * 2 triangles * 3 vertices
+
+		gl.Enable(gl.CULL_FACE)
+		gl.DepthMask(true)
+		gl.Disable(gl.BLEND)
 	}
 
 	gl.BindVertexArray(0)
