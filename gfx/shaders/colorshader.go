@@ -36,7 +36,7 @@ void main() {
 	gl_Position = projection * view * model * vec4(vert, 1);
 	position = projection * view * model * vec4(vert, 1);
 	worldPosition = vec3(model * vec4(vert, 1));
-	norm_out = norm;
+	norm_out = normalize(mat3(transpose(inverse(model))) * norm);
 	uv_out = uv;
 
 	for (int i=0;i < NUMBER_OF_CASCADES; i++) {

@@ -1,0 +1,39 @@
+newmtl Dark_grey
+illum 2
+Kd 0.20 0.20 0.20
+Ka 0.05 0.05 0.05
+Ks 0.10 0.10 0.10
+Ns 16.00
+map_Kd assets/camera_dark_grey.png
+
+newmtl Black
+illum 2
+Kd 0.05 0.05 0.05
+Ka 0.02 0.02 0.02
+Ks 0.05 0.05 0.05
+Ns 8.00
+map_Kd assets/camera_black.png
+
+newmtl Light_grey
+illum 2
+Kd 0.55 0.55 0.55
+Ka 0.10 0.10 0.10
+Ks 0.20 0.20 0.20
+Ns 32.00
+map_Kd assets/camera_light_grey.png
+
+newmtl Red
+illum 2
+Kd 0.80 0.05 0.05
+Ka 0.10 0.00 0.00
+Ks 0.10 0.05 0.05
+Ns 16.00
+map_Kd assets/camera_red.png
+
+newmtl Material
+illum 2
+Kd 0.30 0.30 0.30
+Ka 0.05 0.05 0.05
+Ks 0.10 0.10 0.10
+Ns 16.00
+map_Kd assets/camera_material.png

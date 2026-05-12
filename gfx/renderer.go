@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"log"
+	"math"
 
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
 	"github.com/brandonnelson3/GoRender/gfx/uniforms"
@@ -198,6 +199,21 @@ func (renderer *r) Update(updateables []Updateable) {
 }
 
 func (renderer *r) Render(sky *Sky, renderables []Renderable) {
+	if ActiveCamera == ThirdPerson && FirstPersonCameraRenderable != nil && FirstPerson.IsFrustumRenderingEnabled() {
+		h := FirstPerson.GetHorizontalAngle()
+		v := FirstPerson.GetVerticalAngle()
+		baseCorrection := mgl32.HomogRotate3DY(-math.Pi / 2)
+		rotation := mgl32.HomogRotate3DY(h).Mul4(mgl32.HomogRotate3DZ(v).Mul4(baseCorrection))
+
+		const scale = firstPersonCameraModelScale
+		lensModelLocal := mgl32.Vec3{-2.5, 6.0, -10.5}.Mul(scale)
+		lensWorldOffset4 := rotation.Mul4x1(lensModelLocal.Vec4(0)) // w=0 because it's a vector
+		lensWorldOffset := lensWorldOffset4.Vec3()
+		FirstPersonCameraRenderable.Position = FirstPerson.GetPosition().Sub(lensWorldOffset)
+		FirstPersonCameraRenderable.Rotation = rotation
+		renderables = append(renderables, FirstPersonCameraRenderable)
+	}
+
 	gl.Disable(gl.CULL_FACE)
 	gl.Enable(gl.POLYGON_OFFSET_FILL)
 

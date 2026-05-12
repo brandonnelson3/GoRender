@@ -26,6 +26,11 @@ var (
 	// ActiveCamera is either FirstPerson or ThirdPerson, depending on which is currently being used for rendering.
 	ActiveCamera *camera
 
+	// FirstPersonCameraRenderable is an optional model rendered at the FirstPerson
+	// camera's position whenever the ThirdPerson view (and thus the frustum) is
+	// active. Set this once after InitCameras() to enable it.
+	FirstPersonCameraRenderable *VAORenderable
+
 	redColor    = mgl32.Vec3{1, 0, 0}
 	greenColor  = mgl32.Vec3{0, 1, 0}
 	blueColor   = mgl32.Vec3{0, 0, 1}
@@ -314,6 +319,23 @@ func (c *camera) SetPose(position mgl32.Vec3, horizontalAngle, verticalAngle flo
 // deterministic setup in render-test mode.
 func (c *camera) SetFrustumRendering(enabled bool) {
 	c.renderFrustum = enabled
+}
+
+// IsFrustumRenderingEnabled returns whether the frustum is currently enabled.
+func (c *camera) IsFrustumRenderingEnabled() bool {
+	return c.renderFrustum
+}
+
+// GetHorizontalAngle returns the camera's current yaw (horizontal rotation).
+// This is used by the renderer to orient FirstPersonCameraRenderable each frame.
+func (c *camera) GetHorizontalAngle() float32 {
+	return c.horizontalAngle
+}
+
+// GetVerticalAngle returns the camera's current pitch (vertical tilt).
+// This is used by the renderer to orient FirstPersonCameraRenderable each frame.
+func (c *camera) GetVerticalAngle() float32 {
+	return c.verticalAngle
 }
 
 // GetForward returns the forward unit vector for this camera.

@@ -83,6 +83,10 @@ func main() {
 		panic(err)
 	}
 
+	if err := gfx.InitFirstPersonCameraModel("assets/Camera.obj"); err != nil {
+		log.Println("warning: could not load camera model:", err)
+	}
+
 	terr := terrain.NewTerrain()
 
 	renderables := []gfx.Renderable{terr}

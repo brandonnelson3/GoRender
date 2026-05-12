@@ -96,12 +96,15 @@ func LoadObjFile(file string) (*Object, error) {
 				mtllib[k] = v
 			}
 		}
-		if strings.HasPrefix(line, gPrefix) {
+		// Split into a new render group when we encounter a new object or a new material,
+		// so that each portion of the VAO renders with the correct uniform texture.
+		if strings.HasPrefix(line, gPrefix) || strings.HasPrefix(line, "o ") || strings.HasPrefix(line, usemtlPrefix) {
 			if g.end > g.start {
 				result.groups = append(result.groups, g)
 				g = group{
-					start: int32(len(result.vertices)) + 1,
-					end:   int32(len(result.vertices)) + 1,
+					start: int32(len(result.vertices)),
+					end:   int32(len(result.vertices)),
+					mat:   g.mat, // inherit the current material until usemtl changes it
 				}
 			}
 		}

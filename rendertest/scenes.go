@@ -72,6 +72,18 @@ var All = []Scene{
 		Height: 360,
 		Setup:  setupCornerRoomFrustum,
 	},
+	{
+		Name:   "frustum_lens_closeup",
+		Width:  640,
+		Height: 360,
+		Setup:  setupFrustumLensCloseup,
+	},
+	{
+		Name:   "frustum_lens_top",
+		Width:  640,
+		Height: 360,
+		Setup:  setupFrustumLensTop,
+	},
 }
 
 // setupCornerRoom builds a small interior corner:
@@ -275,6 +287,13 @@ func setupCornerRoomFrustum() []gfx.Renderable {
 
 	cubeVerts := makeCube(mgl32.Vec3{0, 0, 0}, 2)
 
+	// Register the film camera model with the renderer so it appears at the
+	// FirstPerson position whenever ThirdPerson is active (now and in any future
+	// scene that uses the ThirdPerson view).
+	if err := gfx.InitFirstPersonCameraModel("assets/Camera.obj"); err != nil {
+		log.Fatalf("rendertest: %v", err)
+	}
+
 	return []gfx.Renderable{
 		gfx.NewVAORenderable(floorVerts, floorTex),
 		gfx.NewVAORenderable(ceilVerts, floorTex),
@@ -283,6 +302,141 @@ func setupCornerRoomFrustum() []gfx.Renderable {
 		gfx.NewVAORenderable(cubeVerts, crateTex),
 	}
 }
+
+// setupFrustumLensCloseup is a diagnostic scene for aligning the camera model's
+// lens with the FirstPerson frustum origin.
+//
+// ThirdPerson is placed 4 units to FirstPerson's RIGHT (perpendicular to the
+// look direction) and 1 unit up, then aimed back at FirstPerson. This gives a
+// clean side view of the camera model and the frustum wireframe so the
+// lens/frustum offset can be measured and corrected.
+//
+// At fpHAngle=135°, right = Rotate3DY(135°)*(0,0,1) = (sin135°,0,cos135°) = (0.707,0,-0.707).
+// ThirdPerson forward to look back: opposite-right = (-0.707,0,0.707).
+// Engine forward (cos h, 0, -sin h) = (-0.707, 0, 0.707) → h = 225° = 5π/4.
+func setupFrustumLensCloseup() []gfx.Renderable {
+	const (
+		fpHAngle = float32(3 * math.Pi / 4)
+		fpVAngle = float32(-0.2)
+	)
+	gfx.FirstPerson.SetPose(mgl32.Vec3{9, 4, 9}, fpHAngle, fpVAngle)
+	gfx.FirstPerson.SetFrustumRendering(true)
+
+	if err := gfx.InitFirstPersonCameraModel("assets/Camera.obj"); err != nil {
+		log.Fatalf("rendertest: %v", err)
+	}
+
+	// ThirdPerson: 4 units right of FP + 1 unit up, looking back at FP.
+	const sideStep = float32(4)
+	tpPos := mgl32.Vec3{
+		9 + sideStep*float32(math.Sin(float64(fpHAngle))),  // right on X
+		4 + 1,
+		9 + sideStep*float32(math.Cos(float64(fpHAngle))),  // right on Z
+	}
+	gfx.ThirdPerson.SetPose(tpPos, float32(5*math.Pi/4), -0.15)
+	gfx.ActiveCamera = gfx.ThirdPerson
+
+	gfx.ResetDirectionalLight(mgl32.Vec3{0, 0, 0}, 0.0, mgl32.Vec3{0.1, -1, 0}.Normalize())
+	gfx.ResetPointLights()
+	gfx.AddPointLight(
+		mgl32.Vec3{1.5, 5, 1.5},
+		mgl32.Vec3{1, 0.95, 0.85},
+		1.0,
+		22.0,
+	)
+	gfx.AddPointLight(
+		tpPos,
+		mgl32.Vec3{1, 1, 1},
+		1.5,
+		20.0,
+	)
+
+	floorTex := mustLoadTexture("assets/sand.png")
+	crateTex := mustLoadTexture("assets/crate1_diffuse.png")
+
+	const (
+		roomW = float32(16)
+		roomD = float32(16)
+	)
+	floorN := mgl32.Vec3{0, 1, 0}
+	floorVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{0, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, 0}, Norm: floorN, UV: mgl32.Vec2{4, 0}},
+	}
+	cubeVerts := makeCube(mgl32.Vec3{0, 0, 0}, 2)
+	// Omit walls so the camera model isn't obscured from the side view.
+	return []gfx.Renderable{
+		gfx.NewVAORenderable(floorVerts, floorTex),
+		gfx.NewVAORenderable(cubeVerts, crateTex),
+	}
+}
+
+// setupFrustumLensTop is a diagnostic scene for aligning the camera model's
+// lens horizontally with the FirstPerson frustum origin.
+//
+// ThirdPerson is placed 5 units directly above FirstPerson, looking straight down.
+func setupFrustumLensTop() []gfx.Renderable {
+	const (
+		fpHAngle = float32(3 * math.Pi / 4)
+		fpVAngle = float32(-0.2)
+	)
+	gfx.FirstPerson.SetPose(mgl32.Vec3{9, 4, 9}, fpHAngle, fpVAngle)
+	gfx.FirstPerson.SetFrustumRendering(true)
+
+	if err := gfx.InitFirstPersonCameraModel("assets/Camera.obj"); err != nil {
+		log.Fatalf("rendertest: %v", err)
+	}
+
+	// ThirdPerson: 5 units directly above FP, looking straight down.
+	// We keep the yaw identical to FP so the top-down view aligns with the camera's forward.
+	tpPos := mgl32.Vec3{9, 4 + 5, 9}
+	gfx.ThirdPerson.SetPose(tpPos, fpHAngle, -math.Pi/2.0+0.01) // slight offset to prevent LookAtV degenerate cases if any
+	gfx.ActiveCamera = gfx.ThirdPerson
+
+	gfx.ResetDirectionalLight(mgl32.Vec3{0, 0, 0}, 0.0, mgl32.Vec3{0.1, -1, 0}.Normalize())
+	gfx.ResetPointLights()
+	gfx.AddPointLight(
+		mgl32.Vec3{1.5, 5, 1.5},
+		mgl32.Vec3{1, 0.95, 0.85},
+		1.0,
+		22.0,
+	)
+	gfx.AddPointLight(
+		tpPos,
+		mgl32.Vec3{1, 1, 1},
+		1.5,
+		20.0,
+	)
+
+	floorTex := mustLoadTexture("assets/sand.png")
+	crateTex := mustLoadTexture("assets/crate1_diffuse.png")
+
+	const (
+		roomW = float32(16)
+		roomD = float32(16)
+	)
+	floorN := mgl32.Vec3{0, 1, 0}
+	floorVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{0, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, 0}, Norm: floorN, UV: mgl32.Vec2{4, 0}},
+	}
+	cubeVerts := makeCube(mgl32.Vec3{0, 0, 0}, 2)
+	
+	return []gfx.Renderable{
+		gfx.NewVAORenderable(floorVerts, floorTex),
+		gfx.NewVAORenderable(cubeVerts, crateTex),
+	}
+}
+
+
 
 // makeCube builds a unit-cube with side length `size`, with its minimum corner
 // at `origin`. All 6 faces are included with correct outward normals and UV tiling.
