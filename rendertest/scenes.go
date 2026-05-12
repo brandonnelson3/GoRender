@@ -66,6 +66,12 @@ var All = []Scene{
 		Height: 360,
 		Setup:  setupCornerRoom,
 	},
+	{
+		Name:   "corner_room_frustum",
+		Width:  640,
+		Height: 360,
+		Setup:  setupCornerRoomFrustum,
+	},
 }
 
 // setupCornerRoom builds a small interior corner:
@@ -94,7 +100,7 @@ func setupCornerRoom() []gfx.Renderable {
 
 	gfx.ResetPointLights()
 	gfx.AddPointLight(
-		mgl32.Vec3{1.5, 5, 1.5}, // above the crate in the corner
+		mgl32.Vec3{1.5, 5, 1.5},   // above the crate in the corner
 		mgl32.Vec3{1, 0.95, 0.85}, // soft warm white
 		1.0,
 		22.0, // large radius so the red wash reaches all walls
@@ -145,6 +151,118 @@ func setupCornerRoom() []gfx.Renderable {
 	}
 
 	// Right wall — X=0, normal +X. CCW from +X: (0,0,D)→(0,0,0)→(0,H,0)
+	rightN := mgl32.Vec3{1, 0, 0}
+	rightVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: rightN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: rightN, UV: mgl32.Vec2{4, 0}},
+		{Vert: mgl32.Vec3{0, roomH, 0}, Norm: rightN, UV: mgl32.Vec2{4, 2}},
+		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: rightN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{0, roomH, 0}, Norm: rightN, UV: mgl32.Vec2{4, 2}},
+		{Vert: mgl32.Vec3{0, roomH, roomD}, Norm: rightN, UV: mgl32.Vec2{0, 2}},
+	}
+
+	cubeVerts := makeCube(mgl32.Vec3{0, 0, 0}, 2)
+
+	return []gfx.Renderable{
+		gfx.NewVAORenderable(floorVerts, floorTex),
+		gfx.NewVAORenderable(ceilVerts, floorTex),
+		gfx.NewVAORenderable(leftVerts, wallTex),
+		gfx.NewVAORenderable(rightVerts, wallTex),
+		gfx.NewVAORenderable(cubeVerts, crateTex),
+	}
+}
+
+// setupCornerRoomFrustum is identical to setupCornerRoom except:
+//   - ActiveCamera is ThirdPerson, placed a few steps behind and above FirstPerson
+//     along the same look direction, so it has a clear view of the frustum.
+//   - FirstPerson's full-frustum wireframe overlay is enabled.
+//
+// Use this scene to verify that the ThirdPerson camera correctly renders the
+// FirstPerson camera's view frustum.
+func setupCornerRoomFrustum() []gfx.Renderable {
+	const (
+		fpHAngle = float32(3 * math.Pi / 4) // 135° — toward -X,-Z (the corner)
+		fpVAngle = float32(-0.2)             // slight downward tilt
+	)
+
+	// FirstPerson: identical pose to corner_room.
+	gfx.FirstPerson.SetPose(mgl32.Vec3{9, 4, 9}, fpHAngle, fpVAngle)
+
+	// Enable the full-frustum wireframe so it is visible from ThirdPerson.
+	gfx.FirstPerson.SetFrustumRendering(true)
+
+	// ThirdPerson: step back 10 units behind FirstPerson along the reverse of its
+	// look direction, and rise 5 units in Y.
+	//
+	// Engine forward = Rotate3DY(h)*(1,0,0) = (cos h, 0, -sin h).
+	// At h=135°: forward ≈ (-0.707, 0, -0.707).
+	// "Behind" = -forward = (-cos h, 0, +sin h).
+	const stepBack = float32(10)
+	tpPos := mgl32.Vec3{
+		9 - stepBack*float32(math.Cos(float64(fpHAngle))), // step behind on X
+		4 + 5,                                              // elevated
+		9 + stepBack*float32(math.Sin(float64(fpHAngle))), // step behind on Z
+	}
+	// Keep the same yaw so ThirdPerson looks toward the corner (and past FP),
+	// but tilt more steeply so the frustum box falls in the middle of the frame.
+	gfx.ThirdPerson.SetPose(tpPos, fpHAngle, fpVAngle-0.25)
+	gfx.ActiveCamera = gfx.ThirdPerson
+
+	// Same lighting as corner_room, but with a slight X tilt on the directional
+	// light so its direction is never parallel to world-up (0,1,0). A direction
+	// of exactly (0,-1,0) causes a degenerate LookAtV inside FirstPerson.Update()
+	// and produces NaN shadow matrices, which silently prevents frustum lines from
+	// appearing.
+	gfx.ResetDirectionalLight(mgl32.Vec3{0, 0, 0}, 0.0, mgl32.Vec3{0.1, -1, 0}.Normalize())
+	gfx.ResetPointLights()
+	gfx.AddPointLight(
+		mgl32.Vec3{1.5, 5, 1.5},
+		mgl32.Vec3{1, 0.95, 0.85},
+		1.0,
+		22.0,
+	)
+
+	// Same geometry as corner_room.
+	floorTex := mustLoadTexture("assets/sand.png")
+	wallTex := mustLoadTexture("assets/brick_wall.png")
+	crateTex := mustLoadTexture("assets/crate1_diffuse.png")
+
+	const (
+		roomW = float32(16)
+		roomD = float32(16)
+		roomH = float32(8)
+	)
+
+	floorN := mgl32.Vec3{0, 1, 0}
+	floorVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{0, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, 0, roomD}, Norm: floorN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{roomW, 0, 0}, Norm: floorN, UV: mgl32.Vec2{4, 0}},
+	}
+
+	ceilN := mgl32.Vec3{0, -1, 0}
+	ceilVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, roomH, 0}, Norm: ceilN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, roomH, 0}, Norm: ceilN, UV: mgl32.Vec2{4, 0}},
+		{Vert: mgl32.Vec3{roomW, roomH, roomD}, Norm: ceilN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{0, roomH, 0}, Norm: ceilN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, roomH, roomD}, Norm: ceilN, UV: mgl32.Vec2{4, 4}},
+		{Vert: mgl32.Vec3{0, roomH, roomD}, Norm: ceilN, UV: mgl32.Vec2{0, 4}},
+	}
+
+	leftN := mgl32.Vec3{0, 0, 1}
+	leftVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: leftN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, 0, 0}, Norm: leftN, UV: mgl32.Vec2{4, 0}},
+		{Vert: mgl32.Vec3{roomW, roomH, 0}, Norm: leftN, UV: mgl32.Vec2{4, 2}},
+		{Vert: mgl32.Vec3{0, 0, 0}, Norm: leftN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{roomW, roomH, 0}, Norm: leftN, UV: mgl32.Vec2{4, 2}},
+		{Vert: mgl32.Vec3{0, roomH, 0}, Norm: leftN, UV: mgl32.Vec2{0, 2}},
+	}
+
 	rightN := mgl32.Vec3{1, 0, 0}
 	rightVerts := []gfx.Vertex{
 		{Vert: mgl32.Vec3{0, 0, roomD}, Norm: rightN, UV: mgl32.Vec2{0, 0}},

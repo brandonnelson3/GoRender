@@ -309,6 +309,13 @@ func (c *camera) SetPose(position mgl32.Vec3, horizontalAngle, verticalAngle flo
 	c.verticalAngle = verticalAngle
 }
 
+// SetFrustumRendering enables or disables the full-frustum wireframe overlay
+// drawn from the perspective of the ThirdPerson camera. This is intended for
+// deterministic setup in render-test mode.
+func (c *camera) SetFrustumRendering(enabled bool) {
+	c.renderFrustum = enabled
+}
+
 // GetForward returns the forward unit vector for this camera.
 func (c *camera) GetForward() mgl32.Vec3 {
 	return mgl32.Rotate3DY(c.horizontalAngle).Mul3x1(mgl32.Rotate3DZ(c.verticalAngle).Mul3x1((mgl32.Vec3{1, 0, 0})))
@@ -367,7 +374,10 @@ func (c *camera) RenderFrustum() {
 	}
 
 	if c.renderFrustum {
-		gl.DrawArrays(gl.LINES, 150, 24)
+		// Each cascade occupies 50 vertices in the VBO (24 frustum lines + 1 center
+		// + 1 eye + 24 shadow-frustum lines). The camera's own frustum is appended
+		// after all cascade data, so its start offset is NumberOfCascades * 50.
+		gl.DrawArrays(gl.LINES, int32(NumberOfCascades*50), 24)
 	}
 
 	gl.BindVertexArray(0)
