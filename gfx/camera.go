@@ -311,7 +311,13 @@ func (c *camera) Update(d float64) {
 		}
 
 		// Update main frustum wireframe lines
-		for _, i := range lineIndices {
+		mainFrustumLineIndices := []int{
+			// Near
+			0, 1, 1, 2, 2, 3, 3, 0,
+			// Sides
+			0, 4, 1, 5, 2, 6, 3, 7,
+		}
+		for _, i := range mainFrustumLineIndices {
 			vertices = append(vertices, LineVertex{mainFrustumCorners[i], whiteColor})
 		}
 		gl.BindVertexArray(c.vao)
@@ -322,7 +328,6 @@ func (c *camera) Update(d float64) {
 		shellVertices := []ShellVertex{}
 		quads := [][]int{
 			{0, 1, 2, 3}, // Near
-			{5, 4, 7, 6}, // Far
 			{0, 4, 5, 1}, // Top
 			{3, 2, 6, 7}, // Bottom
 			{4, 0, 3, 7}, // Left
@@ -448,7 +453,7 @@ func (c *camera) RenderFrustum() {
 		// Each cascade occupies 50 vertices in the VBO (24 frustum lines + 1 center
 		// + 1 eye + 24 shadow-frustum lines). The camera's own frustum is appended
 		// after all cascade data, so its start offset is NumberOfCascades * 50.
-		gl.DrawArrays(gl.LINES, int32(NumberOfCascades*50), 24)
+		gl.DrawArrays(gl.LINES, int32(NumberOfCascades*50), 16)
 
 		Renderer.frustumShader.Use()
 		Renderer.frustumShader.View.Set(ThirdPerson.GetView())
@@ -462,7 +467,7 @@ func (c *camera) RenderFrustum() {
 		gl.Disable(gl.CULL_FACE)
 
 		gl.BindVertexArray(c.shellVAO)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36) // 6 faces * 2 triangles * 3 vertices
+		gl.DrawArrays(gl.TRIANGLES, 0, 30) // 5 faces * 2 triangles * 3 vertices
 
 		gl.Enable(gl.CULL_FACE)
 		gl.DepthMask(true)
