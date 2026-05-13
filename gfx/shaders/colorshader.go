@@ -87,6 +87,8 @@ uniform float zFar;
 uniform float shadowMapSize;
 uniform vec3 ambientLightColor;
 uniform float cascadeDepthLimits[NUMBER_OF_CASCADES + 1];
+uniform vec3 firstPersonPosition;
+uniform vec3 firstPersonForward;
 uniform sampler2D diffuse;
 uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
@@ -170,7 +172,7 @@ void main() {
 		DirectionalLight directionalLight = directionalLightBuffer.data;
 		float NdL = max(0.0f, dot(norm_out, -1*directionalLight.direction));
 		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
-		float depthTest = position.z;
+		float depthTest = dot(worldPosition - firstPersonPosition, firstPersonForward);
 
 		vec3 shadowCoords[4] = vec3[](
 			lightPositions[0] * 0.5 + 0.5, 
@@ -240,6 +242,8 @@ type ColorShader struct {
 	ShadowMapSize      *uniforms.Float
 	AmbientLightColor  *uniforms.Vector3
 	CascadeDepthLimits *uniforms.FloatArray
+	FirstPersonPosition *uniforms.Vector3
+	FirstPersonForward  *uniforms.Vector3
 	Diffuse            *uniforms.Sampler2D
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
@@ -306,6 +310,8 @@ func NewColorShader() (*ColorShader, error) {
 	shadowMapSizeLoc := gl.GetUniformLocation(program, gl.Str("shadowMapSize\x00"))
 	ambientLightColorLoc := gl.GetUniformLocation(program, gl.Str("ambientLightColor\x00"))
 	cascadeDepthLimitsLoc := gl.GetUniformLocation(program, gl.Str("cascadeDepthLimits\x00"))
+	firstPersonPositionLoc := gl.GetUniformLocation(program, gl.Str("firstPersonPosition\x00"))
+	firstPersonForwardLoc := gl.GetUniformLocation(program, gl.Str("firstPersonForward\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
@@ -330,6 +336,8 @@ func NewColorShader() (*ColorShader, error) {
 		ShadowMapSize:             uniforms.NewFloat(program, shadowMapSizeLoc),
 		AmbientLightColor:         uniforms.NewVector3(program, ambientLightColorLoc),
 		CascadeDepthLimits:        uniforms.NewFloatArray(program, cascadeDepthLimitsLoc),
+		FirstPersonPosition:       uniforms.NewVector3(program, firstPersonPositionLoc),
+		FirstPersonForward:        uniforms.NewVector3(program, firstPersonForwardLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),

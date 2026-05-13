@@ -205,6 +205,13 @@ func (renderer *r) Update(updateables []Updateable) {
 	}
 }
 
+// SetRenderMode sets the global render mode.
+func SetRenderMode(mode int32) {
+	Renderer.colorShader.Use()
+	Renderer.colorShader.RenderMode.Set(mode)
+	gl.UseProgram(0)
+}
+
 func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	if ActiveCamera == ThirdPerson && FirstPersonCameraRenderable != nil && FirstPerson.IsFrustumRenderingEnabled() {
 		h := FirstPerson.GetHorizontalAngle()
@@ -279,6 +286,8 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	renderer.colorShader.ShadowMapSize.Set(shadowMapSize)
 	renderer.colorShader.AmbientLightColor.Set(ambientLightColor)
 	renderer.colorShader.CascadeDepthLimits.Set(&ShadowSplits[0], NumberOfCascades+1)
+	renderer.colorShader.FirstPersonPosition.Set(FirstPerson.GetPosition())
+	renderer.colorShader.FirstPersonForward.Set(FirstPerson.GetForward())
 	renderer.colorShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	renderer.colorShader.DirectionalLightBuffer.Set(GetDirectionalLightBuffer())
 	renderer.colorShader.ShadowMap1.Set(gl.TEXTURE1, 1, renderer.csmDepthMaps[0])

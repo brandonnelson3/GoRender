@@ -30,8 +30,8 @@ type Scene struct {
 var All = []Scene{
 	{
 		Name:   "sky_noon",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup: func() []gfx.Renderable {
 			// Camera looking due-north at a slight downward angle.
 			gfx.FirstPerson.SetPose(mgl32.Vec3{0, 5, 0}, 0, -0.1)
@@ -46,8 +46,8 @@ var All = []Scene{
 	},
 	{
 		Name:   "sky_sunset",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup: func() []gfx.Renderable {
 			// Camera looking west into the sunset.
 			gfx.FirstPerson.SetPose(mgl32.Vec3{0, 5, 0}, float32(math.Pi/2) /* west */, 0)
@@ -62,27 +62,39 @@ var All = []Scene{
 	},
 	{
 		Name:   "corner_room",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup:  setupCornerRoom,
 	},
 	{
 		Name:   "corner_room_frustum",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup:  setupCornerRoomFrustum,
 	},
 	{
 		Name:   "frustum_lens_closeup",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup:  setupFrustumLensCloseup,
 	},
 	{
 		Name:   "frustum_lens_top",
-		Width:  640,
-		Height: 360,
+		Width:  1920,
+		Height: 1080,
 		Setup:  setupFrustumLensTop,
+	},
+	{
+		Name:   "crates_shadows_cascades",
+		Width:  1920,
+		Height: 1080,
+		Setup:  setupCratesShadowsCascades,
+	},
+	{
+		Name:   "crates_shadows_cascades_frustum",
+		Width:  1920,
+		Height: 1080,
+		Setup:  setupCratesShadowsCascadesFrustum,
 	},
 }
 
@@ -496,4 +508,84 @@ func mustLoadTexture(path string) uint32 {
 		log.Fatalf("rendertest: failed to load texture %q: %v", path, err)
 	}
 	return tex
+}
+
+// buildCratesShadowsCascades builds the common elements for the crates scene.
+func buildCratesShadowsCascades() []gfx.Renderable {
+	gfx.SetRenderMode(5)
+
+	// Directional light at an angle to cast clear shadows across the ground
+	gfx.ResetDirectionalLight(mgl32.Vec3{1, 1, 1}, 1.0, mgl32.Vec3{-1, -1, -1}.Normalize())
+	gfx.ResetPointLights()
+
+	sandTex := mustLoadTexture("assets/sand.png")
+	crateTex := mustLoadTexture("assets/crate1_diffuse.png")
+
+	// Ground plane
+	const (
+		planeW = float32(100)
+		planeD = float32(200)
+	)
+	floorN := mgl32.Vec3{0, 1, 0}
+	floorVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{-planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{-planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{-planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{10, 20}},
+	}
+
+	renderables := []gfx.Renderable{
+		gfx.NewVAORenderable(floorVerts, sandTex),
+	}
+
+	// 20 cubes in a long row along the -Z axis
+	for i := 0; i < 20; i++ {
+		// spaced by 10 units
+		zPos := float32(-i * 10)
+		cubeVerts := makeCube(mgl32.Vec3{-1, 0, zPos - 1}, 2)
+		renderables = append(renderables, gfx.NewVAORenderable(cubeVerts, crateTex))
+	}
+
+	return renderables
+}
+
+// setupCratesShadowsCascades creates a scene with a long row of crates on a sand plane,
+// illuminated by a directional light to cast shadows, rendered in mode 5 to visualize
+// the shadow cascades. This scene uses the FirstPerson camera.
+func setupCratesShadowsCascades() []gfx.Renderable {
+	gfx.FirstPerson.SetPose(
+		mgl32.Vec3{-4, 4, 6},
+		float32(math.Pi/2 - 0.2), // slightly angled right to look at the crates
+		-0.1,                     // slightly angled down
+	)
+	gfx.FirstPerson.SetFrustumRendering(false)
+	gfx.ActiveCamera = gfx.FirstPerson
+
+	return buildCratesShadowsCascades()
+}
+
+// setupCratesShadowsCascadesFrustum creates the same scene as setupCratesShadowsCascades,
+// but uses the ThirdPerson camera to view the FirstPerson camera's frustum.
+func setupCratesShadowsCascadesFrustum() []gfx.Renderable {
+	gfx.FirstPerson.SetPose(
+		mgl32.Vec3{-4, 4, 6},
+		float32(math.Pi/2 - 0.2), // slightly angled right to look at the crates
+		-0.1,                     // slightly angled down
+	)
+	gfx.FirstPerson.SetFrustumRendering(true)
+
+	if err := gfx.InitFirstPersonCameraModel("assets/Camera.obj"); err != nil {
+		log.Fatalf("rendertest: %v", err)
+	}
+
+	gfx.ThirdPerson.SetPose(
+		mgl32.Vec3{-4, 34, 26},
+		float32(math.Pi/2 - 0.2), // same horizontal angle as first person
+		-0.8,                     // angled steeply down
+	)
+	gfx.ActiveCamera = gfx.ThirdPerson
+
+	return buildCratesShadowsCascades()
 }
