@@ -19,7 +19,7 @@ const (
 	// shadowMapSize is the size of the square depth buffers used for CSM.
 	shadowMapSize = 2048
 	// NumberOfCascades is the number of shadow cascades being used.
-	NumberOfCascades = 4
+	NumberOfCascades = 5
 )
 
 // Renderer is the global instance of a Renderer.
@@ -31,7 +31,7 @@ var (
 	// shadowSplits is the percents of the full view spectrum for each shadow cascade.
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
-	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 10, 30, 70, 200}
+	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 10, 30, 70, 200, 500}
 )
 
 type r struct {
@@ -175,6 +175,8 @@ func InitRenderer() {
 				UpdatePip(&csmDepthMaps[2], Window.GetNearFar(2))
 			case glfw.KeyKPDivide:
 				UpdatePip(&csmDepthMaps[3], Window.GetNearFar(3))
+			case glfw.KeyKPMultiply:
+				UpdatePip(&csmDepthMaps[4], Window.GetNearFar(4))
 			case glfw.KeyPrintScreen:
 				Screenshot()
 			case glfw.KeyL:
@@ -294,6 +296,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	renderer.colorShader.ShadowMap2.Set(gl.TEXTURE2, 2, renderer.csmDepthMaps[1])
 	renderer.colorShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
 	renderer.colorShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
+	renderer.colorShader.ShadowMap5.Set(gl.TEXTURE6, 6, renderer.csmDepthMaps[4])
 	for _, renderable := range renderables {
 		renderable.Render(renderer.colorShader)
 	}

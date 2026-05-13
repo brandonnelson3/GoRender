@@ -15,7 +15,7 @@ const (
 	colorShaderVertSrc                  = `
 #version 450
 
-const int NUMBER_OF_CASCADES = 4;
+const int NUMBER_OF_CASCADES = 5;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -47,7 +47,7 @@ void main() {
 	colorShaderFragSrc                    = `
 #version 450
 
-const int NUMBER_OF_CASCADES = 4;
+const int NUMBER_OF_CASCADES = 5;
 
 // TODO: Probably can pull this out into a common place.
 struct PointLight {
@@ -94,6 +94,7 @@ uniform sampler2D shadowMap1;
 uniform sampler2D shadowMap2;
 uniform sampler2D shadowMap3;
 uniform sampler2D shadowMap4;
+uniform sampler2D shadowMap5;
 
 in vec4 position;
 in vec3 worldPosition;
@@ -130,8 +131,10 @@ float getShadowFactor(int index, vec3 projCoords)
 				shadowMapDepth = texture(shadowMap2, projCoords.xy + vec2(i,j) * texelSize).x;
 			} else if(index == 2) {
 				shadowMapDepth = texture(shadowMap3, projCoords.xy + vec2(i,j) * texelSize).x;
-			} else {
+			} else if(index == 3) {
 				shadowMapDepth = texture(shadowMap4, projCoords.xy + vec2(i,j) * texelSize).x;
+			} else {
+				shadowMapDepth = texture(shadowMap5, projCoords.xy + vec2(i,j) * texelSize).x;
 			}			
 			if (linearize(currentDepth) > linearize(shadowMapDepth)) {
 				shadowFactor -= 0.1f;
@@ -174,14 +177,15 @@ void main() {
 		vec3 directionalLightColor = (NdL) * directionalLight.color * directionalLight.brightness;
 		float depthTest = dot(worldPosition - firstPersonPosition, firstPersonForward);
 
-		vec3 shadowCoords[4] = vec3[](
+		vec3 shadowCoords[5] = vec3[](
 			lightPositions[0] * 0.5 + 0.5, 
 			lightPositions[1] * 0.5 + 0.5, 
 			lightPositions[2] * 0.5 + 0.5,
-			lightPositions[3] * 0.5 + 0.5
+			lightPositions[3] * 0.5 + 0.5,
+			lightPositions[4] * 0.5 + 0.5
 		);
 
-		int shadowIndex = 4;
+		int shadowIndex = 5;
 		vec3 shadowIndexColor = vec3(1, 1, 1);
 		if ((saturatef(shadowCoords[0].x) == shadowCoords[0].x) && (saturatef(shadowCoords[0].y) == shadowCoords[0].y) && depthTest < cascadeDepthLimits[1]) {			
 			shadowIndex = 0;
@@ -195,6 +199,9 @@ void main() {
 		} else if((saturatef(shadowCoords[3].x) == shadowCoords[3].x) && (saturatef(shadowCoords[3].y) == shadowCoords[3].y) && depthTest < cascadeDepthLimits[4]){
 			shadowIndex = 3;
 			shadowIndexColor = vec3(1, 1, .5);
+		} else if((saturatef(shadowCoords[4].x) == shadowCoords[4].x) && (saturatef(shadowCoords[4].y) == shadowCoords[4].y) && depthTest < cascadeDepthLimits[5]){
+			shadowIndex = 4;
+			shadowIndexColor = vec3(.5, 1, 1);
 		}
 
 		if (renderMode == 0) {
@@ -202,7 +209,7 @@ void main() {
 		}
 		
 		float shadowFactor = 1.0f;	
-		if (shadowIndex != 4) {
+		if (shadowIndex != 5) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
 		}		
 		
@@ -248,7 +255,7 @@ type ColorShader struct {
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
 
-	ShadowMap1, ShadowMap2, ShadowMap3, ShadowMap4 *uniforms.Sampler2D
+	ShadowMap1, ShadowMap2, ShadowMap3, ShadowMap4, ShadowMap5 *uniforms.Sampler2D
 }
 
 // NewColorShader instantiates and initializes a shader object.
@@ -317,6 +324,7 @@ func NewColorShader() (*ColorShader, error) {
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
 	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
 	shadowMap4Loc := gl.GetUniformLocation(program, gl.Str("shadowMap4\x00"))
+	shadowMap5Loc := gl.GetUniformLocation(program, gl.Str("shadowMap5\x00"))
 
 	gl.DeleteShader(vertexShader)
 	gl.DeleteShader(fragmentShader)
@@ -346,5 +354,6 @@ func NewColorShader() (*ColorShader, error) {
 		ShadowMap2:                uniforms.NewSampler2D(program, shadowMap2Loc),
 		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 		ShadowMap4:                uniforms.NewSampler2D(program, shadowMap4Loc),
+		ShadowMap5:                uniforms.NewSampler2D(program, shadowMap5Loc),
 	}, nil
 }

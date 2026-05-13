@@ -35,8 +35,9 @@ var (
 	greenColor  = mgl32.Vec3{0, 1, 0}
 	blueColor   = mgl32.Vec3{0, 0, 1}
 	yellowColor = mgl32.Vec3{1, 1, 0}
+	cyanColor   = mgl32.Vec3{0, 1, 1}
 
-	cascadeColors = []mgl32.Vec3{redColor, greenColor, blueColor, yellowColor}
+	cascadeColors = []mgl32.Vec3{redColor, greenColor, blueColor, yellowColor, cyanColor}
 
 	whiteColor = mgl32.Vec3{1, 1, 1}
 )
@@ -58,10 +59,12 @@ type camera struct {
 	renderCascade1                 bool
 	renderCascade2                 bool
 	renderCascade3                 bool
+	renderCascade4                 bool
 	renderCascadeCenters           bool
 	renderCascade1ShadowFrustum    bool
 	renderCascade2ShadowFrustum    bool
 	renderCascade3ShadowFrustum    bool
+	renderCascade4ShadowFrustum    bool
 	renderCascadeShadowFrustumEyes bool
 }
 
@@ -104,11 +107,13 @@ func InitCameras() {
 		renderCascade1:                 false,
 		renderCascade2:                 false,
 		renderCascade3:                 false,
+		renderCascade4:                 false,
 		renderCascadeCenters:           false,
 		renderFrustum:                  false,
 		renderCascade1ShadowFrustum:    false,
 		renderCascade2ShadowFrustum:    false,
 		renderCascade3ShadowFrustum:    false,
+		renderCascade4ShadowFrustum:    false,
 		renderCascadeShadowFrustumEyes: false,
 	}
 
@@ -447,6 +452,19 @@ func (c *camera) RenderFrustum() {
 			gl.DrawArrays(gl.POINTS, 125, 1)
 		}
 		gl.DrawArrays(gl.LINES, 126, 24)
+	}
+
+	if c.renderCascade4 {
+		gl.DrawArrays(gl.LINES, 150, 24)
+		if c.renderCascadeCenters {
+			gl.DrawArrays(gl.POINTS, 174, 1)
+		}
+	}
+	if c.renderCascade4ShadowFrustum {
+		if c.renderCascadeShadowFrustumEyes {
+			gl.DrawArrays(gl.POINTS, 175, 1)
+		}
+		gl.DrawArrays(gl.LINES, 176, 24)
 	}
 
 	if c.renderFrustum {
