@@ -96,6 +96,12 @@ var All = []Scene{
 		Height: 1080,
 		Setup:  setupCratesShadowsCascadesFrustum,
 	},
+	{
+		Name:   "floating_crate",
+		Width:  1920,
+		Height: 1080,
+		Setup:  setupFloatingCrate,
+	},
 }
 
 // setupCornerRoom builds a small interior corner:
@@ -206,7 +212,7 @@ func setupCornerRoom() []gfx.Renderable {
 func setupCornerRoomFrustum() []gfx.Renderable {
 	const (
 		fpHAngle = float32(3 * math.Pi / 4) // 135° — toward -X,-Z (the corner)
-		fpVAngle = float32(-0.2)             // slight downward tilt
+		fpVAngle = float32(-0.2)            // slight downward tilt
 	)
 
 	// FirstPerson: identical pose to corner_room.
@@ -224,7 +230,7 @@ func setupCornerRoomFrustum() []gfx.Renderable {
 	const stepBack = float32(10)
 	tpPos := mgl32.Vec3{
 		9 - stepBack*float32(math.Cos(float64(fpHAngle))), // step behind on X
-		4 + 5,                                              // elevated
+		4 + 5, // elevated
 		9 + stepBack*float32(math.Sin(float64(fpHAngle))), // step behind on Z
 	}
 	// Keep the same yaw so ThirdPerson looks toward the corner (and past FP),
@@ -441,14 +447,12 @@ func setupFrustumLensTop() []gfx.Renderable {
 		{Vert: mgl32.Vec3{roomW, 0, 0}, Norm: floorN, UV: mgl32.Vec2{4, 0}},
 	}
 	cubeVerts := makeCube(mgl32.Vec3{0, 0, 0}, 2)
-	
+
 	return []gfx.Renderable{
 		gfx.NewVAORenderable(floorVerts, floorTex),
 		gfx.NewVAORenderable(cubeVerts, crateTex),
 	}
 }
-
-
 
 // makeCube builds a unit-cube with side length `size`, with its minimum corner
 // at `origin`. All 6 faces are included with correct outward normals and UV tiling.
@@ -528,12 +532,12 @@ func buildCratesShadowsCascades() []gfx.Renderable {
 	)
 	floorN := mgl32.Vec3{0, 1, 0}
 	floorVerts := []gfx.Vertex{
-		{Vert: mgl32.Vec3{-planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
-		{Vert: mgl32.Vec3{-planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
-		{Vert: mgl32.Vec3{planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
-		{Vert: mgl32.Vec3{-planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
-		{Vert: mgl32.Vec3{planeW/2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
-		{Vert: mgl32.Vec3{planeW/2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{10, 20}},
+		{Vert: mgl32.Vec3{-planeW / 2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{-planeW / 2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{-planeW / 2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, 50}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, -planeD}, Norm: floorN, UV: mgl32.Vec2{10, 20}},
 	}
 
 	renderables := []gfx.Renderable{
@@ -557,8 +561,8 @@ func buildCratesShadowsCascades() []gfx.Renderable {
 func setupCratesShadowsCascades() []gfx.Renderable {
 	gfx.FirstPerson.SetPose(
 		mgl32.Vec3{-4, 4, 6},
-		float32(math.Pi/2 - 0.2), // slightly angled right to look at the crates
-		-0.1,                     // slightly angled down
+		float32(math.Pi/2-0.2), // slightly angled right to look at the crates
+		-0.1,                   // slightly angled down
 	)
 	gfx.FirstPerson.SetFrustumRendering(false)
 	gfx.ActiveCamera = gfx.FirstPerson
@@ -571,8 +575,8 @@ func setupCratesShadowsCascades() []gfx.Renderable {
 func setupCratesShadowsCascadesFrustum() []gfx.Renderable {
 	gfx.FirstPerson.SetPose(
 		mgl32.Vec3{-4, 4, 6},
-		float32(math.Pi/2 - 0.2), // slightly angled right to look at the crates
-		-0.1,                     // slightly angled down
+		float32(math.Pi/2-0.2), // slightly angled right to look at the crates
+		-0.1,                   // slightly angled down
 	)
 	gfx.FirstPerson.SetFrustumRendering(true)
 
@@ -582,10 +586,54 @@ func setupCratesShadowsCascadesFrustum() []gfx.Renderable {
 
 	gfx.ThirdPerson.SetPose(
 		mgl32.Vec3{-4, 34, 26},
-		float32(math.Pi/2 - 0.2), // same horizontal angle as first person
-		-0.8,                     // angled steeply down
+		float32(math.Pi/2-0.2), // same horizontal angle as first person
+		-0.8,                   // angled steeply down
 	)
 	gfx.ActiveCamera = gfx.ThirdPerson
 
 	return buildCratesShadowsCascades()
+}
+
+// setupFloatingCrate creates a scene with a sand ground plane and a floating crate.
+func setupFloatingCrate() []gfx.Renderable {
+	gfx.SetRenderMode(0) // Default shading
+
+	gfx.FirstPerson.SetPose(
+		mgl32.Vec3{0, 6, 10},
+		float32(math.Pi/2), // looking -Z
+		-0.2,               // slightly down
+	)
+	gfx.FirstPerson.SetFrustumRendering(false)
+	gfx.ActiveCamera = gfx.FirstPerson
+
+	gfx.ResetDirectionalLight(mgl32.Vec3{1, 1, 1}, 0.2, mgl32.Vec3{-1, 0, -1}.Normalize())
+	gfx.ResetPointLights()
+	gfx.AddPointLight(mgl32.Vec3{0, 10, 0}, mgl32.Vec3{1, 0.8, 0.6}, 0.8, 20.0)
+
+	sandTex := mustLoadTexture("assets/sand.png")
+	crateTex := mustLoadTexture("assets/crate1_diffuse.png")
+
+	const (
+		planeW = float32(100)
+		planeD = float32(100)
+	)
+	floorN := mgl32.Vec3{0, 1, 0}
+	floorVerts := []gfx.Vertex{
+		{Vert: mgl32.Vec3{-planeW / 2, 0, -planeD / 2}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{-planeW / 2, 0, planeD / 2}, Norm: floorN, UV: mgl32.Vec2{0, 0}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, planeD / 2}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{-planeW / 2, 0, -planeD / 2}, Norm: floorN, UV: mgl32.Vec2{0, 20}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, planeD / 2}, Norm: floorN, UV: mgl32.Vec2{10, 0}},
+		{Vert: mgl32.Vec3{planeW / 2, 0, -planeD / 2}, Norm: floorN, UV: mgl32.Vec2{10, 20}},
+	}
+
+	renderables := []gfx.Renderable{
+		gfx.NewVAORenderable(floorVerts, sandTex),
+	}
+
+	// Floating cube, bottom face at Y=4
+	cubeVerts := makeCube(mgl32.Vec3{-1, 4, -1}, 2)
+	renderables = append(renderables, gfx.NewVAORenderable(cubeVerts, crateTex))
+
+	return renderables
 }

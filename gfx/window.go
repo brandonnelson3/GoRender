@@ -58,6 +58,7 @@ func (window *w) RecenterCursor() {
 func (window *w) Resize(width, height int32) {
 	window.Width = uint32(width)
 	window.Height = uint32(height)
+	ResizePointLightBuffers()
 }
 
 // GetProjection returns the projection matrix.

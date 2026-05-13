@@ -166,10 +166,10 @@ void main() {
 			PointLight light = lightBuffer.data[lightIndex];
 			vec3 lightVector = light.position - worldPosition;
 			float dist = length(lightVector);
-			float NdL = max(0.0f, dot(norm_out, lightVector*(1.0f/dist)));
-			float attenuation = 1.0f - clamp(dist * (1.0/(light.radius)), 0.0, 1.0);
-			vec3 diffuse = NdL * light.color * light.intensity;
-			pointLightColor += attenuation * diffuse;
+			vec3 lightDir = normalize(lightVector);
+			float diff = max(dot(norm_out, lightDir), 0.0);
+			float attenuation = max(1.0 - (dist / light.radius), 0.0);
+			pointLightColor += light.color * light.intensity * diff * attenuation;
 		}
 		
 		DirectionalLight directionalLight = directionalLightBuffer.data;

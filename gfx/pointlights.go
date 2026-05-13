@@ -49,13 +49,20 @@ func InitPointLights() {
 
 	// Bind light buffer
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, lightBuffer)
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(&PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
 
 	// Bind visible light indices buffer
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer)
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(getTotalNumTiles())*int(unsafe.Sizeof(&VisibleIndex{}))*MaximumPointLights, nil, gl.STATIC_DRAW)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(getTotalNumTiles())*int(unsafe.Sizeof(VisibleIndex{}))*MaximumPointLights, nil, gl.STATIC_DRAW)
 
 	// Unbind for safety.
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
+}
+
+// ResizePointLightBuffers reallocates the visible light indices buffer based on the current window size.
+func ResizePointLightBuffers() {
+	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, int(getTotalNumTiles())*int(unsafe.Sizeof(VisibleIndex{}))*MaximumPointLights, nil, gl.STATIC_DRAW)
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
 }
 
@@ -69,7 +76,7 @@ func ResetPointLights() {
 	mu.Unlock()
 
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, lightBuffer)
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(&PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
 }
 
@@ -100,7 +107,7 @@ func AddPointLight(position, color mgl32.Vec3, intensity, radius float32) {
 	mu.Unlock()
 
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, lightBuffer)
-	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(&PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
+	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
 
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, 0)
 }
