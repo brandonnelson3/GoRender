@@ -203,7 +203,10 @@ void main() {
 		if (shadowIndex != 4) {
 			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
 		}		
-		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(directionalLightColor*shadowFactor, 1.0) + diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(pointLightColor, 1.0);
+		
+		vec3 ambientLight = directionalLight.color * directionalLight.brightness * 0.2f;
+
+		outputColor = diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(directionalLightColor*shadowFactor + ambientLight, 1.0) + diffuseColor * vec4(shadowIndexColor, 1.0) * vec4(pointLightColor, 1.0);
 	} else if (renderMode == 1) {
 		uint i=0;
 		for (i; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {}
