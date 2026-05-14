@@ -33,8 +33,7 @@ void main() {
 	gl_Position = worldPos;
 }` + "\x00"
 
-	// Geometry shader: emit one triangle per cubemap face (6 faces total).
-	// shadowMatrices[6] holds the 6 face view-projection matrices.
+	// Geometry shader: emit triangles for a single light's cubemap (6 faces).
 	pointLightShadowShaderGeomSrc = `
 #version 450
 
@@ -42,6 +41,7 @@ layout(triangles) in;
 layout(triangle_strip, max_vertices = 18) out;
 
 uniform mat4 shadowMatrices[6];
+uniform int shadowLightIndex;
 
 in vec2 uv_geom[];
 in vec3 worldPos_geom[];
@@ -51,7 +51,7 @@ out vec4 fragPos;
 
 void main() {
 	for (int face = 0; face < 6; ++face) {
-		gl_Layer = face;
+		gl_Layer = shadowLightIndex * 6 + face;
 		for (int i = 0; i < 3; ++i) {
 			fragPos = gl_in[i].gl_Position;
 			uv_frag = uv_geom[i];
@@ -62,12 +62,13 @@ void main() {
 	}
 }` + "\x00"
 
-	// Fragment shader: write linear depth as distance from the light.
+	// Fragment shader: write linear depth as distance from the correct light.
 	pointLightShadowShaderFragSrc = `
 #version 450
 
 uniform sampler2D diffuse;
-uniform vec3 lightPos;
+uniform vec3 lightPos[4];
+uniform int shadowLightIndex;
 uniform float farPlane;
 
 in vec2 uv_frag;
@@ -78,7 +79,7 @@ void main() {
 	if (color.a < 0.5) {
 		discard;
 	}
-	float lightDist = length(fragPos.xyz - lightPos);
+	float lightDist = length(fragPos.xyz - lightPos[shadowLightIndex]);
 	// Store linear depth normalised to [0,1] relative to farPlane.
 	gl_FragDepth = lightDist / farPlane;
 }` + "\x00"
@@ -88,11 +89,12 @@ void main() {
 type PointLightShadowShader struct {
 	shader
 
-	Model         *uniforms.Matrix4
-	ShadowMatrices *uniforms.Matrix4Array
-	Diffuse       *uniforms.Sampler2D
-	LightPos      *uniforms.Vector3
-	FarPlane      *uniforms.Float
+	Model            *uniforms.Matrix4
+	ShadowMatrices   *uniforms.Matrix4Array
+	Diffuse          *uniforms.Sampler2D
+	LightPos         *uniforms.Vector3Array
+	ShadowLightIndex *uniforms.Int
+	FarPlane         *uniforms.Float
 }
 
 // NewPointLightShadowShader compiles and links the shader, returning any errors.
@@ -167,14 +169,16 @@ func NewPointLightShadowShader() (*PointLightShadowShader, error) {
 	shadowMatricesLoc := gl.GetUniformLocation(program, gl.Str("shadowMatrices\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	lightPosLoc := gl.GetUniformLocation(program, gl.Str("lightPos\x00"))
+	shadowLightIndexLoc := gl.GetUniformLocation(program, gl.Str("shadowLightIndex\x00"))
 	farPlaneLoc := gl.GetUniformLocation(program, gl.Str("farPlane\x00"))
 
 	return &PointLightShadowShader{
-		shader:         shader{program},
-		Model:          uniforms.NewMatrix4(program, modelLoc),
-		ShadowMatrices: uniforms.NewMatrix4Array(program, shadowMatricesLoc),
-		Diffuse:        uniforms.NewSampler2D(program, diffuseLoc),
-		LightPos:       uniforms.NewVector3(program, lightPosLoc),
-		FarPlane:       uniforms.NewFloat(program, farPlaneLoc),
+		shader:           shader{program},
+		Model:            uniforms.NewMatrix4(program, modelLoc),
+		ShadowMatrices:   uniforms.NewMatrix4Array(program, shadowMatricesLoc),
+		Diffuse:          uniforms.NewSampler2D(program, diffuseLoc),
+		LightPos:         uniforms.NewVector3Array(program, lightPosLoc),
+		ShadowLightIndex: uniforms.NewInt(program, shadowLightIndexLoc),
+		FarPlane:         uniforms.NewFloat(program, farPlaneLoc),
 	}, nil
 }

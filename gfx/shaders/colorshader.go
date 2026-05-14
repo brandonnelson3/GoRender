@@ -97,8 +97,8 @@ uniform sampler2D shadowMap4;
 uniform sampler2D shadowMap5;
 
 // Point light shadows
-const int MAX_POINT_SHADOW_LIGHTS = 10;
-uniform samplerCube pointShadowMaps[MAX_POINT_SHADOW_LIGHTS];
+const int MAX_POINT_SHADOW_LIGHTS = 4;
+uniform samplerCubeArray pointShadowMaps;
 uniform int   numPointShadowLights;
 uniform vec3  pointShadowLightPositions[MAX_POINT_SHADOW_LIGHTS];
 uniform float pointShadowFarPlane;
@@ -167,18 +167,22 @@ float getPointShadowFactor(int slot, vec3 worldPos) {
 	float currentDepth = length(fragToLight);
 	float bias = 0.05; 
 	float shadow = 0.0;
-	int samples = 20;
-	float viewDistance = length(firstPersonPosition - worldPos);
-	float diskRadius = (1.0 + (viewDistance / pointShadowFarPlane)) / 50.0;
+	float samples = 2.0; // 2x2 = 4 samples
+	float offset = 0.05;
 	
-	for(int i = 0; i < samples; ++i) {
-		float closestDepth = texture(pointShadowMaps[slot], fragToLight + gridSamplingDisk[i] * diskRadius).r;
-		closestDepth *= pointShadowFarPlane;
-		if(currentDepth - bias > closestDepth) {
-			shadow += 1.0;
+	for(float x = -offset; x < offset; x += offset) {
+		for(float y = -offset; y < offset; y += offset) {
+			for(float z = -offset; z < offset; z += offset) {
+				// We sample 8 points in a small cube around the direction
+				float closestDepth = texture(pointShadowMaps, vec4(fragToLight + vec3(x, y, z), slot)).r;
+				closestDepth *= pointShadowFarPlane;
+				if(currentDepth - bias > closestDepth) {
+					shadow += 1.0;
+				}
+			}
 		}
 	}
-	return 1.0 - (shadow / float(samples));
+	return 1.0 - (shadow / 8.0);
 }
 
 void main() {
@@ -305,7 +309,7 @@ type ColorShader struct {
 	ShadowMap1, ShadowMap2, ShadowMap3, ShadowMap4, ShadowMap5 *uniforms.Sampler2D
 
 	// Point light shadow cubemaps
-	PointShadowMaps           *uniforms.SamplerCubeArray
+	PointShadowMaps           *uniforms.SamplerCubeArrayTexture
 	NumPointShadowLights      *uniforms.Int
 	PointShadowLightPositions *uniforms.Vector3Array
 	PointShadowFarPlane       *uniforms.Float
@@ -378,7 +382,7 @@ func NewColorShader() (*ColorShader, error) {
 	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
 	shadowMap4Loc := gl.GetUniformLocation(program, gl.Str("shadowMap4\x00"))
 	shadowMap5Loc := gl.GetUniformLocation(program, gl.Str("shadowMap5\x00"))
-	pointShadowMapsLoc := gl.GetUniformLocation(program, gl.Str("pointShadowMaps[0]\x00"))
+	pointShadowMapsLoc := gl.GetUniformLocation(program, gl.Str("pointShadowMaps\x00"))
 	numPointShadowLightsLoc := gl.GetUniformLocation(program, gl.Str("numPointShadowLights\x00"))
 	pointShadowLightPositionsLoc := gl.GetUniformLocation(program, gl.Str("pointShadowLightPositions\x00"))
 	pointShadowFarPlaneLoc := gl.GetUniformLocation(program, gl.Str("pointShadowFarPlane\x00"))
@@ -412,7 +416,7 @@ func NewColorShader() (*ColorShader, error) {
 		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 		ShadowMap4:                uniforms.NewSampler2D(program, shadowMap4Loc),
 		ShadowMap5:                uniforms.NewSampler2D(program, shadowMap5Loc),
-		PointShadowMaps:           uniforms.NewSamplerCubeArray(program, pointShadowMapsLoc),
+		PointShadowMaps:           uniforms.NewSamplerCubeArrayTexture(program, pointShadowMapsLoc),
 		NumPointShadowLights:      uniforms.NewInt(program, numPointShadowLightsLoc),
 		PointShadowLightPositions: uniforms.NewVector3Array(program, pointShadowLightPositionsLoc),
 		PointShadowFarPlane:       uniforms.NewFloat(program, pointShadowFarPlaneLoc),

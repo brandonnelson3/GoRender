@@ -257,7 +257,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Enable(gl.CULL_FACE)
 	gl.Disable(gl.POLYGON_OFFSET_FILL)
 
-	// Step 1.5: Point light shadow pass — render depth cubemap for the closest 10 lights.
+	// Step 1.5: Point light shadow pass — render up to 4 closest light cubemaps.
 	numShadowLights := UpdatePointLightShadowSlots(FirstPerson.GetPosition())
 	if numShadowLights > 0 {
 		gl.Viewport(0, 0, pointShadowMapSize, pointShadowMapSize)
@@ -265,8 +265,18 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 		renderer.pointLightShadowShader.FarPlane.Set(PointShadowFarPlane)
 
 		shadowIndices := GetShadowLightIndices()
-		cubemaps := GetPointShadowCubemaps()
+		pointShadowArray := GetPointShadowArray()
 		pointShadowFBO := GetPointShadowFBO()
+
+		gl.BindFramebuffer(gl.FRAMEBUFFER, pointShadowFBO)
+		// Attach the entire cube map array.
+		gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, pointShadowArray, 0)
+		gl.DrawBuffer(gl.NONE)
+		gl.ReadBuffer(gl.NONE)
+		gl.Clear(gl.DEPTH_BUFFER_BIT)
+
+		// Upload all positions once.
+		renderer.pointLightShadowShader.LightPos.Set(&GetPointShadowLightPositions()[0], 4)
 
 		// Back-face culling is safer for room scenes with single-sided walls.
 		gl.Enable(gl.CULL_FACE)
@@ -280,22 +290,14 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 			lightPos := PointLights[lightIdx].Position
 			matrices := BuildPointLightCubemapMatrices(lightPos)
 
-			// Upload the 6 face matrices as a flat array.
 			renderer.pointLightShadowShader.ShadowMatrices.Set(&matrices[0][0], 6)
-			renderer.pointLightShadowShader.LightPos.Set(lightPos)
-
-			gl.BindFramebuffer(gl.FRAMEBUFFER, pointShadowFBO)
-			gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, cubemaps[slot], 0)
-			gl.DrawBuffer(gl.NONE)
-			gl.ReadBuffer(gl.NONE)
-			gl.Clear(gl.DEPTH_BUFFER_BIT)
+			renderer.pointLightShadowShader.ShadowLightIndex.Set(int32(slot))
 
 			for _, renderable := range renderables {
 				renderable.RenderPointLightDepth(renderer.pointLightShadowShader)
 			}
 		}
 
-		gl.CullFace(gl.BACK)
 		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	}
 
@@ -346,9 +348,8 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	renderer.colorShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	renderer.colorShader.ShadowMap5.Set(gl.TEXTURE6, 6, renderer.csmDepthMaps[4])
 
-	// Bind point light shadow cubemaps (slots 7..16 → texture units TEXTURE7..TEXTURE16).
-	cubemaps := GetPointShadowCubemaps()
-	renderer.colorShader.PointShadowMaps.Set(gl.TEXTURE7, 7, (*cubemaps)[:])
+	// Bind point light shadow cubemap array to texture unit 7.
+	renderer.colorShader.PointShadowMaps.Set(gl.TEXTURE7, 7, GetPointShadowArray())
 	renderer.colorShader.NumPointShadowLights.Set(int32(numShadowLights))
 	renderer.colorShader.PointShadowLightPositions.Set(
 		&GetPointShadowLightPositions()[0],

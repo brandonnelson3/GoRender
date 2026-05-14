@@ -14,10 +14,10 @@ const (
 	MaximumPointLights = 1024
 
 	// MaxPointLightShadows is the maximum number of point lights that receive shadow cubemaps.
-	MaxPointLightShadows = 10
+	MaxPointLightShadows = 4
 
 	// pointShadowMapSize is the resolution (width = height) of each cubemap face.
-	pointShadowMapSize = 512
+	pointShadowMapSize = 256
 
 	// pointShadowFarPlane is the far plane distance used for point light shadow projection.
 	PointShadowFarPlane = 25.0
@@ -32,9 +32,9 @@ var (
 
 	lightBuffer, visibleLightIndicesBuffer uint32
 
-	// Point light shadow cubemaps: one FBO shared, MaxPointLightShadows cubemap textures.
-	pointShadowFBO      uint32
-	pointShadowCubemaps [MaxPointLightShadows]uint32
+	// Point light shadow cubemaps: one FBO shared, and a single Texture Array holding all cubemaps.
+	pointShadowFBO   uint32
+	pointShadowArray uint32
 
 	// shadowLightIndices holds, for each shadow slot, the global PointLights index of the
 	// light whose cubemap is stored in that slot. -1 means unused.
@@ -83,32 +83,30 @@ func InitPointLights() {
 	initPointLightShadows()
 }
 
-// initPointLightShadows allocates the FBO and cubemap textures used for point light shadows.
+// initPointLightShadows allocates the FBO and a single texture array used for point light shadows.
 func initPointLightShadows() {
 	for i := range shadowLightIndices {
 		shadowLightIndices[i] = -1
 	}
 
 	gl.GenFramebuffers(1, &pointShadowFBO)
-	gl.GenTextures(MaxPointLightShadows, &pointShadowCubemaps[0])
+	gl.GenTextures(1, &pointShadowArray)
 
-	for i := 0; i < MaxPointLightShadows; i++ {
-		gl.BindTexture(gl.TEXTURE_CUBE_MAP, pointShadowCubemaps[i])
-		for face := 0; face < 6; face++ {
-			gl.TexImage2D(
-				gl.TEXTURE_CUBE_MAP_POSITIVE_X+uint32(face),
-				0, gl.DEPTH_COMPONENT32F,
-				pointShadowMapSize, pointShadowMapSize,
-				0, gl.DEPTH_COMPONENT, gl.FLOAT, nil,
-			)
-		}
-		gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-		gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-		gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
-	}
-	gl.BindTexture(gl.TEXTURE_CUBE_MAP, 0)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP_ARRAY, pointShadowArray)
+	// 4 layers, 6 faces each = 24 faces total.
+	gl.TexImage3D(
+		gl.TEXTURE_CUBE_MAP_ARRAY,
+		0, gl.DEPTH_COMPONENT32F,
+		pointShadowMapSize, pointShadowMapSize, MaxPointLightShadows*6,
+		0, gl.DEPTH_COMPONENT, gl.FLOAT, nil,
+	)
+
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP_ARRAY, 0)
 }
 
 // ResizePointLightBuffers reallocates the visible light indices buffer based on the current window size.
@@ -179,9 +177,9 @@ func GetPointShadowFBO() uint32 {
 	return pointShadowFBO
 }
 
-// GetPointShadowCubemaps returns the array of shadow cubemap texture IDs.
-func GetPointShadowCubemaps() *[MaxPointLightShadows]uint32 {
-	return &pointShadowCubemaps
+// GetPointShadowArray returns the texture array ID containing all point shadow cubemaps.
+func GetPointShadowArray() uint32 {
+	return pointShadowArray
 }
 
 // UpdatePointLightShadowSlots selects the closest MaxPointLightShadows lights to
