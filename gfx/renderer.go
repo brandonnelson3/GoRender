@@ -35,11 +35,12 @@ var (
 )
 
 type r struct {
-	lineShader         *shaders.LineShader
-	depthShader        *shaders.DepthShader
-	lightCullingShader *shaders.LightCullingShader
-	colorShader        *shaders.ColorShader
-	frustumShader      *shaders.FrustumShader
+	lineShader              *shaders.LineShader
+	depthShader             *shaders.DepthShader
+	lightCullingShader      *shaders.LightCullingShader
+	colorShader             *shaders.ColorShader
+	frustumShader           *shaders.FrustumShader
+	pointLightShadowShader  *shaders.PointLightShadowShader
 
 	csmDepthMapFBO uint32
 	csmDepthMaps   [NumberOfCascades]uint32
@@ -90,6 +91,11 @@ func InitRenderer() {
 		log.Fatalf("Failed to compile FrustumShader: %v", err)
 	}
 
+	pls, err := shaders.NewPointLightShadowShader()
+	if err != nil {
+		log.Fatalf("Failed to compile PointLightShadowShader: %v", err)
+	}
+
 	var depthMapFBO uint32
 	gl.GenFramebuffers(1, &depthMapFBO)
 	var depthMap uint32
@@ -132,15 +138,16 @@ func InitRenderer() {
 	UpdatePip(&csmDepthMaps[0], Window.GetNearFar(0))
 
 	Renderer = r{
-		lineShader:         ls,
-		depthShader:        ds,
-		lightCullingShader: lcs,
-		colorShader:        cs,
-		frustumShader:      fs,
-		depthMapFBO:        depthMapFBO,
-		depthMap:           depthMap,
-		csmDepthMapFBO:     csmDepthMapFBO,
-		csmDepthMaps:       csmDepthMaps,
+		lineShader:             ls,
+		depthShader:            ds,
+		lightCullingShader:     lcs,
+		colorShader:            cs,
+		frustumShader:          fs,
+		pointLightShadowShader: pls,
+		depthMapFBO:            depthMapFBO,
+		depthMap:               depthMap,
+		csmDepthMapFBO:         csmDepthMapFBO,
+		csmDepthMaps:           csmDepthMaps,
 	}
 
 	messagebus.RegisterType("key", func(m *messagebus.Message) {
@@ -250,7 +257,48 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Enable(gl.CULL_FACE)
 	gl.Disable(gl.POLYGON_OFFSET_FILL)
 
-	// Step 2: Depth Pass for pointlight culling
+	// Step 1.5: Point light shadow pass — render depth cubemap for the closest 10 lights.
+	numShadowLights := UpdatePointLightShadowSlots(FirstPerson.GetPosition())
+	if numShadowLights > 0 {
+		gl.Viewport(0, 0, pointShadowMapSize, pointShadowMapSize)
+		renderer.pointLightShadowShader.Use()
+		renderer.pointLightShadowShader.FarPlane.Set(PointShadowFarPlane)
+
+		shadowIndices := GetShadowLightIndices()
+		cubemaps := GetPointShadowCubemaps()
+		pointShadowFBO := GetPointShadowFBO()
+
+		// Back-face culling is safer for room scenes with single-sided walls.
+		gl.Enable(gl.CULL_FACE)
+		gl.CullFace(gl.BACK)
+
+		for slot := 0; slot < numShadowLights; slot++ {
+			lightIdx := shadowIndices[slot]
+			if lightIdx < 0 {
+				continue
+			}
+			lightPos := PointLights[lightIdx].Position
+			matrices := BuildPointLightCubemapMatrices(lightPos)
+
+			// Upload the 6 face matrices as a flat array.
+			renderer.pointLightShadowShader.ShadowMatrices.Set(&matrices[0][0], 6)
+			renderer.pointLightShadowShader.LightPos.Set(lightPos)
+
+			gl.BindFramebuffer(gl.FRAMEBUFFER, pointShadowFBO)
+			gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, cubemaps[slot], 0)
+			gl.DrawBuffer(gl.NONE)
+			gl.ReadBuffer(gl.NONE)
+			gl.Clear(gl.DEPTH_BUFFER_BIT)
+
+			for _, renderable := range renderables {
+				renderable.RenderPointLightDepth(renderer.pointLightShadowShader)
+			}
+		}
+
+		gl.CullFace(gl.BACK)
+		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+	}
+
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
@@ -297,6 +345,17 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	renderer.colorShader.ShadowMap3.Set(gl.TEXTURE3, 3, renderer.csmDepthMaps[2])
 	renderer.colorShader.ShadowMap4.Set(gl.TEXTURE4, 4, renderer.csmDepthMaps[3])
 	renderer.colorShader.ShadowMap5.Set(gl.TEXTURE6, 6, renderer.csmDepthMaps[4])
+
+	// Bind point light shadow cubemaps (slots 7..16 → texture units TEXTURE7..TEXTURE16).
+	cubemaps := GetPointShadowCubemaps()
+	renderer.colorShader.PointShadowMaps.Set(gl.TEXTURE7, 7, (*cubemaps)[:])
+	renderer.colorShader.NumPointShadowLights.Set(int32(numShadowLights))
+	renderer.colorShader.PointShadowLightPositions.Set(
+		&GetPointShadowLightPositions()[0],
+		MaxPointLightShadows,
+	)
+	renderer.colorShader.PointShadowFarPlane.Set(PointShadowFarPlane)
+
 	for _, renderable := range renderables {
 		renderable.Render(renderer.colorShader)
 	}

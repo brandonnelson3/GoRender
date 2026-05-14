@@ -76,6 +76,15 @@ func (c *cell) RenderDepth(depthShader *shaders.DepthShader) {
 	}
 }
 
+func (c *cell) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
+	if c.vao != 0 {
+		gl.BindVertexArray(c.vao)
+		shader.Model.Set(mgl32.Translate3D(float32(c.id.x*cellsize), 0, float32(c.id.z*cellsize)))
+		gl.DrawElements(gl.TRIANGLES, c.numIndices, gl.UNSIGNED_INT, nil)
+		gl.BindVertexArray(0)
+	}
+}
+
 type Terrain struct {
 	mu   sync.Mutex
 	data map[cellId]*cell
@@ -286,5 +295,15 @@ func (t *Terrain) RenderDepth(depthShader *shaders.DepthShader) {
 	defer t.mu.Unlock()
 	for _, c := range t.data {
 		c.RenderDepth(depthShader)
+	}
+}
+
+func (t *Terrain) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
+	shader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, c := range t.data {
+		c.RenderPointLightDepth(shader)
 	}
 }

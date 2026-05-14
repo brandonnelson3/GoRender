@@ -134,9 +134,10 @@ void main() {
 		vec4 position = vec4(lightBuffer.data[lightIndex].position, 1.0);
 		float radius = lightBuffer.data[lightIndex].radius;
 
-		// We check if the light exists in our frustum
+		// We check if the light exists in our frustum side planes.
+		// We skip near/far depth planes (4 and 5) to avoid culling issues with depth linearization.
 		float distance = 0.0;
-		for (uint j = 0; j < 6; j++) {
+		for (uint j = 0; j < 4; j++) {
 			distance = dot(position, frustumPlanes[j]) + radius;
 
 			// If one of the tests fails, then there is no intersection

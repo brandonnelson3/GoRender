@@ -22,9 +22,9 @@ uniform mat4 view;
 uniform mat4 model;
 uniform mat4 lightViewProjs[NUMBER_OF_CASCADES];
 
-in vec3 vert;
-in vec3 norm;
-in vec2 uv;
+layout(location = 0) in vec3 vert;
+layout(location = 1) in vec3 norm;
+layout(location = 2) in vec2 uv;
 
 out vec4 position;
 out vec3 worldPosition;
@@ -96,6 +96,13 @@ uniform sampler2D shadowMap3;
 uniform sampler2D shadowMap4;
 uniform sampler2D shadowMap5;
 
+// Point light shadows
+const int MAX_POINT_SHADOW_LIGHTS = 10;
+uniform samplerCube pointShadowMaps[MAX_POINT_SHADOW_LIGHTS];
+uniform int   numPointShadowLights;
+uniform vec3  pointShadowLightPositions[MAX_POINT_SHADOW_LIGHTS];
+uniform float pointShadowFarPlane;
+
 in vec4 position;
 in vec3 worldPosition;
 in vec3 norm_out;
@@ -144,6 +151,36 @@ float getShadowFactor(int index, vec3 projCoords)
 	return shadowFactor;
 }
 
+// PCF samples for softening point light shadows.
+vec3 gridSamplingDisk[20] = vec3[]
+(
+   vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1), 
+   vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+   vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
+   vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
+   vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
+);
+
+// Returns a value in [0,1] where 0.0 is full shadow and 1.0 is full light.
+float getPointShadowFactor(int slot, vec3 worldPos) {
+	vec3 fragToLight = worldPos - pointShadowLightPositions[slot];
+	float currentDepth = length(fragToLight);
+	float bias = 0.05; 
+	float shadow = 0.0;
+	int samples = 20;
+	float viewDistance = length(firstPersonPosition - worldPos);
+	float diskRadius = (1.0 + (viewDistance / pointShadowFarPlane)) / 50.0;
+	
+	for(int i = 0; i < samples; ++i) {
+		float closestDepth = texture(pointShadowMaps[slot], fragToLight + gridSamplingDisk[i] * diskRadius).r;
+		closestDepth *= pointShadowFarPlane;
+		if(currentDepth - bias > closestDepth) {
+			shadow += 1.0;
+		}
+	}
+	return 1.0 - (shadow / float(samples));
+}
+
 void main() {
 	ivec2 location = ivec2(gl_FragCoord.xy);
 	// TODO: Put this 16 somewhere constant.
@@ -169,7 +206,17 @@ void main() {
 			vec3 lightDir = normalize(lightVector);
 			float diff = max(dot(norm_out, lightDir), 0.0);
 			float attenuation = max(1.0 - (dist / light.radius), 0.0);
-			pointLightColor += light.color * light.intensity * diff * attenuation;
+
+			// Point light shadow
+			float plShadow = 1.0;
+			for (int s = 0; s < numPointShadowLights && s < MAX_POINT_SHADOW_LIGHTS; s++) {
+				if (distance(pointShadowLightPositions[s], light.position) < 0.1) {
+					plShadow = getPointShadowFactor(s, worldPosition);
+					break;
+				}
+			}
+
+			pointLightColor += plShadow * light.color * light.intensity * diff * attenuation;
 		}
 		
 		DirectionalLight directionalLight = directionalLightBuffer.data;
@@ -256,6 +303,12 @@ type ColorShader struct {
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
 
 	ShadowMap1, ShadowMap2, ShadowMap3, ShadowMap4, ShadowMap5 *uniforms.Sampler2D
+
+	// Point light shadow cubemaps
+	PointShadowMaps           *uniforms.SamplerCubeArray
+	NumPointShadowLights      *uniforms.Int
+	PointShadowLightPositions *uniforms.Vector3Array
+	PointShadowFarPlane       *uniforms.Float
 }
 
 // NewColorShader instantiates and initializes a shader object.
@@ -325,6 +378,10 @@ func NewColorShader() (*ColorShader, error) {
 	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
 	shadowMap4Loc := gl.GetUniformLocation(program, gl.Str("shadowMap4\x00"))
 	shadowMap5Loc := gl.GetUniformLocation(program, gl.Str("shadowMap5\x00"))
+	pointShadowMapsLoc := gl.GetUniformLocation(program, gl.Str("pointShadowMaps[0]\x00"))
+	numPointShadowLightsLoc := gl.GetUniformLocation(program, gl.Str("numPointShadowLights\x00"))
+	pointShadowLightPositionsLoc := gl.GetUniformLocation(program, gl.Str("pointShadowLightPositions\x00"))
+	pointShadowFarPlaneLoc := gl.GetUniformLocation(program, gl.Str("pointShadowFarPlane\x00"))
 
 	gl.DeleteShader(vertexShader)
 	gl.DeleteShader(fragmentShader)
@@ -355,5 +412,9 @@ func NewColorShader() (*ColorShader, error) {
 		ShadowMap3:                uniforms.NewSampler2D(program, shadowMap3Loc),
 		ShadowMap4:                uniforms.NewSampler2D(program, shadowMap4Loc),
 		ShadowMap5:                uniforms.NewSampler2D(program, shadowMap5Loc),
+		PointShadowMaps:           uniforms.NewSamplerCubeArray(program, pointShadowMapsLoc),
+		NumPointShadowLights:      uniforms.NewInt(program, numPointShadowLightsLoc),
+		PointShadowLightPositions: uniforms.NewVector3Array(program, pointShadowLightPositionsLoc),
+		PointShadowFarPlane:       uniforms.NewFloat(program, pointShadowFarPlaneLoc),
 	}, nil
 }

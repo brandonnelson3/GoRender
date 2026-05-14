@@ -16,6 +16,7 @@ type RenderablePortion struct {
 type Renderable interface {
 	Render(*shaders.ColorShader)
 	RenderDepth(*shaders.DepthShader)
+	RenderPointLightDepth(*shaders.PointLightShadowShader)
 }
 
 // VAORenderable is a object wrapping around something that is renderable on top of a vao.
@@ -96,12 +97,22 @@ func (r *VAORenderable) Render(colorShader *shaders.ColorShader) {
 	}
 }
 
-// Render bind's this renderable's VAO and draws for depth.
+// RenderDepth binds this renderable's VAO and draws for depth.
 func (r *VAORenderable) RenderDepth(depthShader *shaders.DepthShader) {
 	gl.BindVertexArray(r.vao)
 	depthShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
 		depthShader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
+		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
+	}
+}
+
+// RenderPointLightDepth binds this renderable's VAO and draws for point light shadow depth.
+func (r *VAORenderable) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
+	gl.BindVertexArray(r.vao)
+	shader.Model.Set(r.getModelMatrix())
+	for _, p := range r.portions {
+		shader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
 		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
 	}
 }

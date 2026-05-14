@@ -13,13 +13,13 @@ type Vertex struct {
 
 // BindVertexAttributes binds the attributes per vertex.
 func BindVertexAttributes(s uint32) {
-	vertAttrib := uint32(gl.GetAttribLocation(s, gl.Str("vert\x00")))
+	vertAttrib := uint32(0)
 	gl.EnableVertexAttribArray(vertAttrib)
 	gl.VertexAttribPointer(vertAttrib, 3, gl.FLOAT, false, 8*4, gl.PtrOffset(0))
-	normAttrib := uint32(gl.GetAttribLocation(s, gl.Str("norm\x00")))
+	normAttrib := uint32(1)
 	gl.EnableVertexAttribArray(normAttrib)
 	gl.VertexAttribPointer(normAttrib, 3, gl.FLOAT, false, 8*4, gl.PtrOffset(12))
-	uvAttrib := uint32(gl.GetAttribLocation(s, gl.Str("uv\x00")))
+	uvAttrib := uint32(2)
 	gl.EnableVertexAttribArray(uvAttrib)
 	gl.VertexAttribPointer(uvAttrib, 2, gl.FLOAT, false, 8*4, gl.PtrOffset(24))
 }
