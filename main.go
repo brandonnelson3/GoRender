@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/brandonnelson3/GoRender/benchmark"
 	"github.com/brandonnelson3/GoRender/console"
 	"github.com/brandonnelson3/GoRender/gfx"
 	"github.com/brandonnelson3/GoRender/input"
@@ -32,6 +33,7 @@ var (
 	renderTestMode = flag.Bool("rendertest", false, "render all test scenes and exit (no interactive window)")
 	renderScene    = flag.String("scene", "", "if set, only render this scene name (used with -rendertest)")
 	renderOut      = flag.String("out", filepath.Join("rendertest", "testdata", "actual"), "output directory for render-test PNGs")
+	benchmarkMode  = flag.Bool("benchmark", false, "run for 5 seconds and report performance metrics then exit")
 )
 
 func init() {
@@ -64,7 +66,9 @@ func main() {
 		panic(err)
 	}
 
-	console.InitConsole()
+	if !*benchmarkMode {
+		console.InitConsole()
+	}
 	gfx.InitRenderer()
 	gfx.InitCameras()
 	gfx.InitPointLights()
@@ -89,6 +93,13 @@ func main() {
 
 	terr := terrain.NewTerrain()
 
+	if *benchmarkMode {
+		benchmark.RecordMode = true
+		// User requested pose for benchmarking.
+		gfx.FirstPerson.SetPose(mgl32.Vec3{53.28, 52.97, -28.90}, 4.15, -0.43)
+		log.Println("Starting benchmark (5 seconds)...")
+	}
+
 	renderables := []gfx.Renderable{terr}
 	updateables := []gfx.Updateable{terr}
 
@@ -103,22 +114,52 @@ func main() {
 		}
 	}
 
+	startTime := glfw.GetTime()
 	for !gfx.Window.ShouldClose() {
+		if *benchmarkMode && glfw.GetTime()-startTime > 5.0 {
+			break
+		}
+
+		benchmark.Start("Frame")
 		StartOfFrame()
 
+		benchmark.Start("Input Update")
 		input.Update()
-		sky.Update()
+		benchmark.End("Input Update")
 
+		benchmark.Start("Sky Update")
+		sky.Update()
+		benchmark.End("Sky Update")
+
+		benchmark.Start("Camera Update")
 		gfx.FirstPerson.Update(GetPreviousFrameLength())
 		gfx.ThirdPerson.Update(GetPreviousFrameLength())
+		benchmark.End("Camera Update")
 
+		benchmark.Start("Render")
 		gfx.Renderer.Render(sky, renderables)
-		gfx.Renderer.Update(updateables)
+		benchmark.End("Render")
 
+		benchmark.Start("Renderer Update")
+		gfx.Renderer.Update(updateables)
+		benchmark.End("Renderer Update")
+
+		benchmark.Start("Swap Buffers")
 		gfx.Window.SwapBuffers()
+		benchmark.End("Swap Buffers")
+
+		benchmark.Start("Poll Events")
 		glfw.PollEvents()
+		benchmark.End("Poll Events")
+
 		gfx.Window.RecenterCursor()
 		EndOfFrame()
+		benchmark.End("Frame")
+		benchmark.RecordFrame()
+	}
+
+	if *benchmarkMode {
+		benchmark.WriteSummary()
 	}
 }
 

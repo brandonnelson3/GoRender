@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/brandonnelson3/GoRender/benchmark"
 	"github.com/brandonnelson3/GoRender/input"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
@@ -196,6 +197,9 @@ func InitCameras() {
 
 func updateConsoleOnTimer() {
 	for range time.Tick(time.Millisecond * 100) {
+		if benchmark.RecordMode {
+			continue
+		}
 		cameraPosition := ActiveCamera.GetPosition()
 		cameraPositionValue := fmt.Sprintf("[%.2f, %.2f, %.2f]", cameraPosition.X(), cameraPosition.Y(), cameraPosition.Z())
 		messagebus.SendAsync(&messagebus.Message{Type: "console", Data1: "camera_position", Data2: cameraPositionValue})

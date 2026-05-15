@@ -61,6 +61,22 @@ document.addEventListener("DOMContentLoaded", function() {
             if (data.type == "timer_fps") {
                 line.append(new Date().getTime(), data.value);
             }
+
+            if (data.type.startsWith("benchmark_")) {
+                var phaseName = data.type.substring(10);
+                var elementId = "bench_" + phaseName.replace(/[:\s]/g, "_");
+                var element = document.getElementById(elementId);
+                if (!element) {
+                    var container = document.getElementsByClassName('benchmark-container')[0];
+                    var wrapper = document.createElement('div');
+                    wrapper.style.display = "flex";
+                    wrapper.style.justifyContent = "space-between";
+                    wrapper.innerHTML = `<span>${phaseName}:</span> <span id="${elementId}" style="font-family: 'Roboto Mono', monospace; font-weight: bold;">0.0000</span>`;
+                    container.appendChild(wrapper);
+                    element = document.getElementById(elementId);
+                }
+                element.innerHTML = parseFloat(data.value).toFixed(4);
+            }
         };
         ws.onclose = function(){
             console.log('closed!');

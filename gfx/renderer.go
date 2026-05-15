@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 
+	"github.com/brandonnelson3/GoRender/benchmark"
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
 	"github.com/brandonnelson3/GoRender/gfx/uniforms"
 	"github.com/brandonnelson3/GoRender/messagebus"
@@ -241,6 +242,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Enable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 1: Depth Pass for each cascade for shadowing.
+	benchmark.Start("Render: CSM Depth")
 	gl.Viewport(0, 0, shadowMapSize, shadowMapSize)
 	renderer.depthShader.Use()
 	renderer.depthShader.View.Set(mgl32.Ident4())
@@ -253,11 +255,13 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 			renderable.RenderDepth(renderer.depthShader)
 		}
 	}
+	benchmark.End("Render: CSM Depth")
 
 	gl.Enable(gl.CULL_FACE)
 	gl.Disable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 1.5: Point light shadow pass — render up to 4 closest light cubemaps.
+	benchmark.Start("Render: Point Shadows")
 	numShadowLights := UpdatePointLightShadowSlots(FirstPerson.GetPosition())
 	if numShadowLights > 0 {
 		gl.Viewport(0, 0, pointShadowMapSize, pointShadowMapSize)
@@ -300,7 +304,9 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 
 		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 	}
+	benchmark.End("Render: Point Shadows")
 
+	benchmark.Start("Render: Depth Pre-pass")
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.depthMapFBO)
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
@@ -309,8 +315,10 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	for _, renderable := range renderables {
 		renderable.RenderDepth(renderer.depthShader)
 	}
+	benchmark.End("Render: Depth Pre-pass")
 
 	// Step 3: Light culling
+	benchmark.Start("Render: Light Culling")
 	renderer.lightCullingShader.Use()
 	renderer.lightCullingShader.View.Set(ActiveCamera.GetView())
 	renderer.lightCullingShader.Projection.Set(Window.GetProjection())
@@ -321,8 +329,10 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	renderer.lightCullingShader.VisibleLightIndicesBuffer.Set(GetPointLightVisibleLightIndicesBuffer())
 	gl.DispatchCompute(getNumTilesX(), getNumTilesY(), 1)
 	gl.UseProgram(0)
+	benchmark.End("Render: Light Culling")
 
 	// Step 4: Normal pass
+	benchmark.Start("Render: Main Color")
 	gl.BindFramebuffer(gl.FRAMEBUFFER, renderer.TargetFramebuffer)
 	gl.Viewport(0, 0, int32(Window.Width), int32(Window.Height))
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -360,7 +370,9 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	for _, renderable := range renderables {
 		renderable.Render(renderer.colorShader)
 	}
+	benchmark.End("Render: Main Color")
 
+	benchmark.Start("Render: Debug Overlays")
 	if ActiveCamera == ThirdPerson {
 		renderer.lineShader.Use()
 		renderer.lineShader.View.Set(ThirdPerson.GetView())
@@ -369,4 +381,5 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	}
 
 	RenderPip()
+	benchmark.End("Render: Debug Overlays")
 }

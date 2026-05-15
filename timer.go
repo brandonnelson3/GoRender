@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brandonnelson3/GoRender/benchmark"
 	"github.com/brandonnelson3/GoRender/messagebus"
 
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -34,6 +35,9 @@ func init() {
 
 func sendLogMessagesOnTimer() {
 	for range time.Tick(time.Millisecond * 500) {
+		if benchmark.RecordMode {
+			continue
+		}
 		if frames < numAveragedFrameLengths {
 			continue
 		}
