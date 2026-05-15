@@ -151,38 +151,44 @@ float getShadowFactor(int index, vec3 projCoords)
 	return shadowFactor;
 }
 
-// PCF samples for softening point light shadows.
-vec3 gridSamplingDisk[20] = vec3[]
+// Poisson disk samples for softening point light shadows (12 samples).
+vec3 poissonDisk[12] = vec3[]
 (
-   vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1), 
-   vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
-   vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
-   vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
-   vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1)
+   vec3(-0.5212691, -0.4013232,  0.5125319),
+   vec3(-0.7924651,  0.1578255, -0.2209583),
+   vec3(-0.3851416,  0.7363506,  0.3151242),
+   vec3( 0.1652817,  0.1313845,  0.6511982),
+   vec3( 0.4033304,  0.4752404, -0.5239012),
+   vec3(-0.8358865, -0.3427192, -0.1158563),
+   vec3( 0.2826883, -0.0479542, -0.6661914),
+   vec3( 0.8525992,  0.0285867,  0.2790367),
+   vec3( 0.4161608, -0.7312921,  0.1224869),
+   vec3(-0.1114824, -0.7151128, -0.4411124),
+   vec3( 0.1924824,  0.7711284, -0.1411124),
+   vec3( 0.7114824,  0.4151128,  0.2411124)
 );
 
 // Returns a value in [0,1] where 0.0 is full shadow and 1.0 is full light.
-float getPointShadowFactor(int slot, vec3 worldPos) {
+float getPointShadowFactor(int slot, vec3 worldPos, vec3 normal) {
 	vec3 fragToLight = worldPos - pointShadowLightPositions[slot];
 	float currentDepth = length(fragToLight);
-	float bias = 0.05; 
-	float shadow = 0.0;
-	float samples = 2.0; // 2x2 = 4 samples
-	float offset = 0.05;
 	
-	for(float x = -offset; x < offset; x += offset) {
-		for(float y = -offset; y < offset; y += offset) {
-			for(float z = -offset; z < offset; z += offset) {
-				// We sample 8 points in a small cube around the direction
-				float closestDepth = texture(pointShadowMaps, vec4(fragToLight + vec3(x, y, z), slot)).r;
-				closestDepth *= pointShadowFarPlane;
-				if(currentDepth - bias > closestDepth) {
-					shadow += 1.0;
-				}
-			}
+	vec3 lightDir = normalize(-fragToLight);
+	// Normal-dependent bias to reduce acne and leaking at edges.
+	float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.05); 
+	
+	float shadow = 0.0;
+	float samples = 12.0;
+	float diskRadius = 0.05; // Fixed small radius for consistent blur.
+	
+	for(int i = 0; i < 12; ++i) {
+		float closestDepth = texture(pointShadowMaps, vec4(fragToLight + poissonDisk[i] * diskRadius, slot)).r;
+		closestDepth *= pointShadowFarPlane;
+		if(currentDepth - bias > closestDepth) {
+			shadow += 1.0;
 		}
 	}
-	return 1.0 - (shadow / 8.0);
+	return 1.0 - (shadow / samples);
 }
 
 void main() {
@@ -215,7 +221,7 @@ void main() {
 			float plShadow = 1.0;
 			for (int s = 0; s < numPointShadowLights && s < MAX_POINT_SHADOW_LIGHTS; s++) {
 				if (distance(pointShadowLightPositions[s], light.position) < 0.1) {
-					plShadow = getPointShadowFactor(s, worldPosition);
+					plShadow = getPointShadowFactor(s, worldPosition, norm_out);
 					break;
 				}
 			}

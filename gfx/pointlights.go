@@ -17,7 +17,7 @@ const (
 	MaxPointLightShadows = 4
 
 	// pointShadowMapSize is the resolution (width = height) of each cubemap face.
-	pointShadowMapSize = 256
+	pointShadowMapSize = 512
 
 	// pointShadowFarPlane is the far plane distance used for point light shadow projection.
 	PointShadowFarPlane = 25.0
@@ -101,8 +101,8 @@ func initPointLightShadows() {
 		0, gl.DEPTH_COMPONENT, gl.FLOAT, nil,
 	)
 
-	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
