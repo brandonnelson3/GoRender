@@ -94,30 +94,44 @@ func main() {
 	terr := terrain.NewTerrain()
 
 	if *benchmarkMode {
-		benchmark.RecordMode = true
+		benchmark.RecordMode = false // Don't record frames during warmup
 		// User requested pose for benchmarking.
 		gfx.FirstPerson.SetPose(mgl32.Vec3{53.28, 52.97, -28.90}, 4.15, -0.43)
-		log.Println("Starting benchmark (5 seconds)...")
+		log.Println("Warming up benchmark for 1 second...")
 	}
 
 	renderables := []gfx.Renderable{terr}
 	updateables := []gfx.Updateable{terr}
 
+	treeRenderable := objRenderable.Copy()
+	var instanceTransforms []mgl32.Mat4
 	for x := 0; x <= 4; x++ {
 		for z := 0; z <= 4; z++ {
-			r := objRenderable.Copy()
-
 			height := terr.GetHeight(float32(x*8+5), float32(z*8+5))
-
-			r.Position = mgl32.Vec3{float32(x*8 + 5), height, float32(z*8 + 5)}
-			renderables = append(renderables, r)
+			pos := mgl32.Vec3{float32(x*8 + 5), height, float32(z*8 + 5)}
+			m := mgl32.Translate3D(pos.X(), pos.Y(), pos.Z()).Mul4(treeRenderable.Scale.Mul4(treeRenderable.Rotation))
+			instanceTransforms = append(instanceTransforms, m)
 		}
 	}
+	treeRenderable.InstanceTransforms = instanceTransforms
+	renderables = append(renderables, treeRenderable)
 
 	startTime := glfw.GetTime()
+	benchmarkStarted := false
+	const warmupDuration = 1.0
+	const benchmarkDuration = 5.0
+
 	for !gfx.Window.ShouldClose() {
-		if *benchmarkMode && glfw.GetTime()-startTime > 5.0 {
-			break
+		if *benchmarkMode {
+			elapsed := glfw.GetTime() - startTime
+			if !benchmarkStarted && elapsed >= warmupDuration {
+				benchmark.RecordMode = true
+				benchmarkStarted = true
+				log.Println("Warmup complete. Starting benchmark collection (5 seconds)...")
+			}
+			if elapsed >= warmupDuration+benchmarkDuration {
+				break
+			}
 		}
 
 		benchmark.Start("Frame")
@@ -166,6 +180,7 @@ func main() {
 // runRenderTests opens a hidden GL window, renders every test scene into an
 // offscreen FBO, and writes PNGs to *renderOut.
 func runRenderTests() {
+	gfx.RenderTestMode = true
 	// Hidden window still gives us a valid GL 4.5 context on Windows.
 	glfw.WindowHint(glfw.Visible, glfw.False)
 	gfx.CreateWindow("rendertest", 640, 360, windowNear, windowFar, windowFOV)

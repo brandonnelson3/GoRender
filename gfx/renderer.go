@@ -34,6 +34,9 @@ var (
 	// The 0th cascade is effective shadowSplits[0] to shadowSplits[1], therefore there
 	// should be n+1 elements in this list where n is the number of cascades.
 	ShadowSplits = [NumberOfCascades + 1]float32{0.1, 10, 30, 70, 200, 500}
+
+	// RenderTestMode disables HUD overlays like the FPS counter during automated testing.
+	RenderTestMode = false
 )
 
 type r struct {
@@ -416,5 +419,6 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	}
 
 	RenderPip()
+	RenderFPS()
 	benchmark.End("Render: Debug Overlays")
 }

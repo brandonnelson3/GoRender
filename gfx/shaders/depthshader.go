@@ -16,15 +16,18 @@ const (
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
+uniform int isInstanced;
 
 layout(location = 0) in vec3 vert;
 layout(location = 1) in vec3 norm;
 layout(location = 2) in vec2 uv;
+layout(location = 3) in mat4 instanceModel;
 
 out vec2 uv_out;
 
 void main() {
-	gl_Position = projection * view * model * vec4(vert, 1);
+	mat4 modelMat = (isInstanced != 0) ? instanceModel : model;
+	gl_Position = projection * view * modelMat * vec4(vert, 1);
 	uv_out = uv;
 }` + "\x00"
 	depthShaderOriginalFragmentSourceFile = `depthshader.frag`
@@ -48,6 +51,7 @@ type DepthShader struct {
 	shader
 
 	Projection, View, Model *uniforms.Matrix4
+	IsInstanced             *uniforms.Int
 
 	Diffuse *uniforms.Sampler2D
 }
@@ -103,6 +107,7 @@ func NewDepthShader() (*DepthShader, error) {
 	projectionLoc := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	viewLoc := gl.GetUniformLocation(program, gl.Str("view\x00"))
 	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
+	isInstancedLoc := gl.GetUniformLocation(program, gl.Str("isInstanced\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 
 	gl.DeleteShader(vertexShader)
@@ -113,6 +118,7 @@ func NewDepthShader() (*DepthShader, error) {
 		Projection: uniforms.NewMatrix4(program, projectionLoc),
 		View:       uniforms.NewMatrix4(program, viewLoc),
 		Model:      uniforms.NewMatrix4(program, modelLoc),
+		IsInstanced: uniforms.NewInt(program, isInstancedLoc),
 		Diffuse:    uniforms.NewSampler2D(program, diffuseLoc),
 	}, nil
 }

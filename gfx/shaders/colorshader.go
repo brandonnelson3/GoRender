@@ -21,10 +21,12 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 uniform mat4 lightViewProjs[NUMBER_OF_CASCADES];
+uniform int isInstanced;
 
 layout(location = 0) in vec3 vert;
 layout(location = 1) in vec3 norm;
 layout(location = 2) in vec2 uv;
+layout(location = 3) in mat4 instanceModel;
 
 out vec4 position;
 out vec3 worldPosition;
@@ -33,14 +35,15 @@ out vec2 uv_out;
 out vec4 lightPositions[NUMBER_OF_CASCADES];
 
 void main() {
-	gl_Position = projection * view * model * vec4(vert, 1);
-	position = projection * view * model * vec4(vert, 1);
-	worldPosition = vec3(model * vec4(vert, 1));
-	norm_out = normalize(mat3(transpose(inverse(model))) * norm);
+	mat4 modelMat = (isInstanced != 0) ? instanceModel : model;
+	gl_Position = projection * view * modelMat * vec4(vert, 1);
+	position = projection * view * modelMat * vec4(vert, 1);
+	worldPosition = vec3(modelMat * vec4(vert, 1));
+	norm_out = normalize(mat3(transpose(inverse(modelMat))) * norm);
 	uv_out = uv;
 
 	for (int i=0;i < NUMBER_OF_CASCADES; i++) {
-		lightPositions[i] = lightViewProjs[i] * model * vec4(vert, 1);
+		lightPositions[i] = lightViewProjs[i] * modelMat * vec4(vert, 1);
 	}
 }` + "\x00"
 	colorShaderOriginalFragmentSourceFile = `colorshader.frag`
@@ -308,6 +311,7 @@ type ColorShader struct {
 	FirstPersonPosition *uniforms.Vector3
 	FirstPersonForward  *uniforms.Vector3
 	Diffuse            *uniforms.Sampler2D
+	IsInstanced        *uniforms.Int
 
 	LightBuffer, VisibleLightIndicesBuffer, DirectionalLightBuffer *buffers.Binding
 
@@ -382,6 +386,7 @@ func NewColorShader() (*ColorShader, error) {
 	firstPersonPositionLoc := gl.GetUniformLocation(program, gl.Str("firstPersonPosition\x00"))
 	firstPersonForwardLoc := gl.GetUniformLocation(program, gl.Str("firstPersonForward\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
+	isInstancedLoc := gl.GetUniformLocation(program, gl.Str("isInstanced\x00"))
 	shadowMap1Loc := gl.GetUniformLocation(program, gl.Str("shadowMap1\x00"))
 	shadowMap2Loc := gl.GetUniformLocation(program, gl.Str("shadowMap2\x00"))
 	shadowMap3Loc := gl.GetUniformLocation(program, gl.Str("shadowMap3\x00"))
@@ -413,6 +418,7 @@ func NewColorShader() (*ColorShader, error) {
 		FirstPersonPosition:       uniforms.NewVector3(program, firstPersonPositionLoc),
 		FirstPersonForward:        uniforms.NewVector3(program, firstPersonForwardLoc),
 		Diffuse:                   uniforms.NewSampler2D(program, diffuseLoc),
+		IsInstanced:               uniforms.NewInt(program, isInstancedLoc),
 		LightBuffer:               buffers.NewBinding(0),
 		VisibleLightIndicesBuffer: buffers.NewBinding(1),
 		DirectionalLightBuffer:    buffers.NewBinding(2),

@@ -18,16 +18,19 @@ const (
 #version 450
 
 uniform mat4 model;
+uniform int isInstanced;
 
 layout(location = 0) in vec3 vert;
 layout(location = 1) in vec3 norm;
 layout(location = 2) in vec2 uv;
+layout(location = 3) in mat4 instanceModel;
 
 out vec2 uv_geom;
 out vec3 worldPos_geom;
 
 void main() {
-	vec4 worldPos = model * vec4(vert, 1.0);
+	mat4 modelMat = (isInstanced != 0) ? instanceModel : model;
+	vec4 worldPos = modelMat * vec4(vert, 1.0);
 	worldPos_geom = worldPos.xyz;
 	uv_geom = uv;
 	gl_Position = worldPos;
@@ -90,6 +93,7 @@ type PointLightShadowShader struct {
 	shader
 
 	Model            *uniforms.Matrix4
+	IsInstanced      *uniforms.Int
 	ShadowMatrices   *uniforms.Matrix4Array
 	Diffuse          *uniforms.Sampler2D
 	LightPos         *uniforms.Vector3Array
@@ -166,6 +170,7 @@ func NewPointLightShadowShader() (*PointLightShadowShader, error) {
 	gl.DeleteShader(fragmentShader)
 
 	modelLoc := gl.GetUniformLocation(program, gl.Str("model\x00"))
+	isInstancedLoc := gl.GetUniformLocation(program, gl.Str("isInstanced\x00"))
 	shadowMatricesLoc := gl.GetUniformLocation(program, gl.Str("shadowMatrices\x00"))
 	diffuseLoc := gl.GetUniformLocation(program, gl.Str("diffuse\x00"))
 	lightPosLoc := gl.GetUniformLocation(program, gl.Str("lightPos\x00"))
@@ -175,6 +180,7 @@ func NewPointLightShadowShader() (*PointLightShadowShader, error) {
 	return &PointLightShadowShader{
 		shader:           shader{program},
 		Model:            uniforms.NewMatrix4(program, modelLoc),
+		IsInstanced:      uniforms.NewInt(program, isInstancedLoc),
 		ShadowMatrices:   uniforms.NewMatrix4Array(program, shadowMatricesLoc),
 		Diffuse:          uniforms.NewSampler2D(program, diffuseLoc),
 		LightPos:         uniforms.NewVector3Array(program, lightPosLoc),
