@@ -106,6 +106,8 @@ func initPointLightShadows() {
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE)
+	gl.TexParameteri(gl.TEXTURE_CUBE_MAP_ARRAY, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP_ARRAY, 0)
 }
 
@@ -183,9 +185,9 @@ func GetPointShadowArray() uint32 {
 }
 
 // UpdatePointLightShadowSlots selects the closest MaxPointLightShadows lights to
-// cameraPos and updates shadowLightIndices + pointShadowLightPositions.
+// cameraPos that are also within the camera's view, and updates shadowLightIndices + pointShadowLightPositions.
 // Returns the number of active shadow slots.
-func UpdatePointLightShadowSlots(cameraPos mgl32.Vec3) int {
+func UpdatePointLightShadowSlots(cameraPos mgl32.Vec3, frustum *Frustum) int {
 	mu.Lock()
 	n := int(numPointLights)
 	mu.Unlock()
@@ -202,15 +204,20 @@ func UpdatePointLightShadowSlots(cameraPos mgl32.Vec3) int {
 		idx  int
 		dist float32
 	}
-	candidates := make([]lightDist, n)
+	candidates := make([]lightDist, 0, n)
 	for i := 0; i < n; i++ {
-		candidates[i] = lightDist{i, PointLights[i].Position.Sub(cameraPos).Len()}
+		p := PointLights[i].Position
+		// If a light's shadow sphere doesn't intersect the camera frustum, it's not visible.
+		if frustum != nil && !frustum.IsSphereIn(p, PointShadowFarPlane) {
+			continue
+		}
+		candidates = append(candidates, lightDist{i, p.Sub(cameraPos).Len()})
 	}
 	sort.Slice(candidates, func(a, b int) bool {
 		return candidates[a].dist < candidates[b].dist
 	})
 
-	count := n
+	count := len(candidates)
 	if count > MaxPointLightShadows {
 		count = MaxPointLightShadows
 	}

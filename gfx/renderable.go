@@ -14,9 +14,10 @@ type RenderablePortion struct {
 }
 
 type Renderable interface {
-	Render(*shaders.ColorShader)
-	RenderDepth(*shaders.DepthShader)
-	RenderPointLightDepth(*shaders.PointLightShadowShader)
+	Render(*shaders.ColorShader, *Frustum)
+	RenderDepth(*shaders.DepthShader, *Frustum)
+	RenderPointLightDepth(*shaders.PointLightShadowShader, *Frustum)
+	GetBounds() (mgl32.Vec3, mgl32.Vec3) // World space Min, Max
 }
 
 // VAORenderable is a object wrapping around something that is renderable on top of a vao.
@@ -28,6 +29,9 @@ type VAORenderable struct {
 
 	renderStyle uint32
 	portions    []RenderablePortion
+
+	// LocalMin and LocalMax are the axis-aligned bounding box in model space.
+	LocalMin, LocalMax mgl32.Vec3
 }
 
 // NewVAORenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
@@ -45,6 +49,8 @@ func NewVAORenderable(verticies []Vertex, diffuse uint32) *VAORenderable {
 
 	gl.BindVertexArray(0)
 
+	min, max := calculateBounds(verticies)
+
 	return &VAORenderable{
 		vao:         vao,
 		vbo:         vbo,
@@ -53,7 +59,28 @@ func NewVAORenderable(verticies []Vertex, diffuse uint32) *VAORenderable {
 		Scale:       mgl32.Ident4(),
 		renderStyle: gl.TRIANGLES,
 		portions:    []RenderablePortion{{0, int32(len(verticies)), diffuse}},
+		LocalMin:    min,
+		LocalMax:    max,
 	}
+}
+
+func calculateBounds(verts []Vertex) (mgl32.Vec3, mgl32.Vec3) {
+	if len(verts) == 0 {
+		return mgl32.Vec3{}, mgl32.Vec3{}
+	}
+	min := verts[0].Vert
+	max := verts[0].Vert
+	for _, v := range verts {
+		for i := 0; i < 3; i++ {
+			if v.Vert[i] < min[i] {
+				min[i] = v.Vert[i]
+			}
+			if v.Vert[i] > max[i] {
+				max[i] = v.Vert[i]
+			}
+		}
+	}
+	return min, max
 }
 
 // NewChunkedRenderable instantiates a Renderable for the given verticies of the normal Vertex Type.
@@ -71,6 +98,8 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *VAO
 
 	gl.BindVertexArray(0)
 
+	min, max := calculateBounds(verticies)
+
 	return &VAORenderable{
 		vao:         vao,
 		vbo:         vbo,
@@ -79,6 +108,8 @@ func NewChunkedRenderable(verticies []Vertex, portions []RenderablePortion) *VAO
 		Scale:       mgl32.Ident4(),
 		renderStyle: gl.TRIANGLES,
 		portions:    portions,
+		LocalMin:    min,
+		LocalMax:    max,
 	}
 }
 
@@ -88,7 +119,13 @@ func (r *VAORenderable) getModelMatrix() mgl32.Mat4 {
 }
 
 // Render bind's this renderable's VAO and draws.
-func (r *VAORenderable) Render(colorShader *shaders.ColorShader) {
+func (r *VAORenderable) Render(colorShader *shaders.ColorShader, frustum *Frustum) {
+	if frustum != nil {
+		min, max := r.GetBounds()
+		if !frustum.IsBoxIn(min, max) {
+			return
+		}
+	}
 	gl.BindVertexArray(r.vao)
 	colorShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
@@ -98,7 +135,13 @@ func (r *VAORenderable) Render(colorShader *shaders.ColorShader) {
 }
 
 // RenderDepth binds this renderable's VAO and draws for depth.
-func (r *VAORenderable) RenderDepth(depthShader *shaders.DepthShader) {
+func (r *VAORenderable) RenderDepth(depthShader *shaders.DepthShader, frustum *Frustum) {
+	if frustum != nil {
+		min, max := r.GetBounds()
+		if !frustum.IsBoxIn(min, max) {
+			return
+		}
+	}
 	gl.BindVertexArray(r.vao)
 	depthShader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
@@ -108,13 +151,51 @@ func (r *VAORenderable) RenderDepth(depthShader *shaders.DepthShader) {
 }
 
 // RenderPointLightDepth binds this renderable's VAO and draws for point light shadow depth.
-func (r *VAORenderable) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
+func (r *VAORenderable) RenderPointLightDepth(shader *shaders.PointLightShadowShader, frustum *Frustum) {
+	if frustum != nil {
+		min, max := r.GetBounds()
+		if !frustum.IsBoxIn(min, max) {
+			return
+		}
+	}
 	gl.BindVertexArray(r.vao)
 	shader.Model.Set(r.getModelMatrix())
 	for _, p := range r.portions {
 		shader.Diffuse.Set(gl.TEXTURE0, 0, p.diffuse)
 		gl.DrawArrays(r.renderStyle, p.startIndex, p.numIndex)
 	}
+}
+
+// GetBounds returns the world-space axis-aligned bounding box.
+func (r *VAORenderable) GetBounds() (mgl32.Vec3, mgl32.Vec3) {
+	m := r.getModelMatrix()
+	corners := [8]mgl32.Vec3{
+		{r.LocalMin.X(), r.LocalMin.Y(), r.LocalMin.Z()},
+		{r.LocalMax.X(), r.LocalMin.Y(), r.LocalMin.Z()},
+		{r.LocalMin.X(), r.LocalMax.Y(), r.LocalMin.Z()},
+		{r.LocalMax.X(), r.LocalMax.Y(), r.LocalMin.Z()},
+		{r.LocalMin.X(), r.LocalMin.Y(), r.LocalMax.Z()},
+		{r.LocalMax.X(), r.LocalMin.Y(), r.LocalMax.Z()},
+		{r.LocalMin.X(), r.LocalMax.Y(), r.LocalMax.Z()},
+		{r.LocalMax.X(), r.LocalMax.Y(), r.LocalMax.Z()},
+	}
+
+	worldMin := mgl32.Vec3{1e9, 1e9, 1e9}
+	worldMax := mgl32.Vec3{-1e9, -1e9, -1e9}
+
+	for _, c := range corners {
+		p := m.Mul4x1(c.Vec4(1))
+		for i := 0; i < 3; i++ {
+			if p[i] < worldMin[i] {
+				worldMin[i] = p[i]
+			}
+			if p[i] > worldMax[i] {
+				worldMax[i] = p[i]
+			}
+		}
+	}
+
+	return worldMin, worldMax
 }
 
 func (r *VAORenderable) Copy() *VAORenderable {

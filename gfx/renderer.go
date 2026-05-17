@@ -3,6 +3,7 @@ package gfx
 import (
 	"log"
 	"math"
+	"sort"
 
 	"github.com/brandonnelson3/GoRender/benchmark"
 	"github.com/brandonnelson3/GoRender/gfx/shaders"
@@ -124,10 +125,14 @@ func InitRenderer() {
 	for _, m := range csmDepthMaps {
 		gl.BindTexture(gl.TEXTURE_2D, m)
 		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, shadowMapSize, shadowMapSize, 0, gl.DEPTH_COMPONENT, gl.FLOAT, nil)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_BORDER)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_BORDER)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL)
+		borderColor := []float32{1.0, 1.0, 1.0, 1.0}
+		gl.TexParameterfv(gl.TEXTURE_2D, gl.TEXTURE_BORDER_COLOR, &borderColor[0])
 	}
 
 	gl.BindFramebuffer(gl.FRAMEBUFFER, csmDepthMapFBO)
@@ -238,7 +243,26 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 		renderables = append(renderables, FirstPersonCameraRenderable)
 	}
 
-	gl.Disable(gl.CULL_FACE)
+	mainFrustum := NewFrustumFromMatrix(Window.GetProjection().Mul4(ActiveCamera.GetView()))
+	type renderableDist struct {
+		r    Renderable
+		dist float32
+	}
+	visibleSorted := make([]renderableDist, 0, len(renderables))
+	camPos := ActiveCamera.GetPosition()
+	for _, r := range renderables {
+		min, max := r.GetBounds()
+		if mainFrustum.IsBoxIn(min, max) {
+			center := min.Add(max).Mul(0.5)
+			visibleSorted = append(visibleSorted, renderableDist{r, center.Sub(camPos).LenSqr()})
+		}
+	}
+	sort.Slice(visibleSorted, func(i, j int) bool {
+		return visibleSorted[i].dist < visibleSorted[j].dist
+	})
+
+	gl.Enable(gl.CULL_FACE)
+	gl.CullFace(gl.FRONT)
 	gl.Enable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 1: Depth Pass for each cascade for shadowing.
@@ -251,18 +275,19 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 		gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, m, 0)
 		gl.Clear(gl.DEPTH_BUFFER_BIT)
 		renderer.depthShader.Projection.Set(FirstPerson.shadowMatrices[i])
+		csmFrustum := NewFrustumFromMatrix(FirstPerson.shadowMatrices[i])
 		for _, renderable := range renderables {
-			renderable.RenderDepth(renderer.depthShader)
+			renderable.RenderDepth(renderer.depthShader, csmFrustum)
 		}
 	}
 	benchmark.End("Render: CSM Depth")
 
-	gl.Enable(gl.CULL_FACE)
+	gl.CullFace(gl.BACK)
 	gl.Disable(gl.POLYGON_OFFSET_FILL)
 
 	// Step 1.5: Point light shadow pass — render up to 4 closest light cubemaps.
 	benchmark.Start("Render: Point Shadows")
-	numShadowLights := UpdatePointLightShadowSlots(FirstPerson.GetPosition())
+	numShadowLights := UpdatePointLightShadowSlots(camPos, mainFrustum)
 	if numShadowLights > 0 {
 		gl.Viewport(0, 0, pointShadowMapSize, pointShadowMapSize)
 		renderer.pointLightShadowShader.Use()
@@ -284,7 +309,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 
 		// Back-face culling is safer for room scenes with single-sided walls.
 		gl.Enable(gl.CULL_FACE)
-		gl.CullFace(gl.BACK)
+		gl.CullFace(gl.FRONT)
 
 		for slot := 0; slot < numShadowLights; slot++ {
 			lightIdx := shadowIndices[slot]
@@ -297,12 +322,22 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 			renderer.pointLightShadowShader.ShadowMatrices.Set(&matrices[0][0], 6)
 			renderer.pointLightShadowShader.ShadowLightIndex.Set(int32(slot))
 
+			lightRange := float32(PointShadowFarPlane)
 			for _, renderable := range renderables {
-				renderable.RenderPointLightDepth(renderer.pointLightShadowShader)
+				min, max := renderable.GetBounds()
+				// Simple sphere-AABB intersection or just distance check.
+				// For now, let's just check if the object is within the light's range box.
+				if min.X() > lightPos.X()+lightRange || max.X() < lightPos.X()-lightRange ||
+					min.Y() > lightPos.Y()+lightRange || max.Y() < lightPos.Y()-lightRange ||
+					min.Z() > lightPos.Z()+lightRange || max.Z() < lightPos.Z()-lightRange {
+					continue
+				}
+				renderable.RenderPointLightDepth(renderer.pointLightShadowShader, nil)
 			}
 		}
 
 		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+		gl.CullFace(gl.BACK)
 	}
 	benchmark.End("Render: Point Shadows")
 
@@ -312,8 +347,8 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	gl.Clear(gl.DEPTH_BUFFER_BIT)
 	renderer.depthShader.View.Set(ActiveCamera.GetView())
 	renderer.depthShader.Projection.Set(Window.GetProjection())
-	for _, renderable := range renderables {
-		renderable.RenderDepth(renderer.depthShader)
+	for _, rd := range visibleSorted {
+		rd.r.RenderDepth(renderer.depthShader, mainFrustum)
 	}
 	benchmark.End("Render: Depth Pre-pass")
 
@@ -367,8 +402,8 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	)
 	renderer.colorShader.PointShadowFarPlane.Set(PointShadowFarPlane)
 
-	for _, renderable := range renderables {
-		renderable.Render(renderer.colorShader)
+	for _, rd := range visibleSorted {
+		rd.r.Render(renderer.colorShader, mainFrustum)
 	}
 	benchmark.End("Render: Main Color")
 

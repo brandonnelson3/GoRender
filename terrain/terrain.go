@@ -85,6 +85,12 @@ func (c *cell) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
 	}
 }
 
+func (c *cell) GetBounds() (mgl32.Vec3, mgl32.Vec3) {
+	min := mgl32.Vec3{float32(c.id.x * cellsize), 0, float32(c.id.z * cellsize)}
+	max := mgl32.Vec3{float32((c.id.x + 1) * cellsize), 50, float32((c.id.z + 1) * cellsize)}
+	return min, max
+}
+
 type Terrain struct {
 	mu   sync.Mutex
 	data map[cellId]*cell
@@ -278,32 +284,52 @@ func (t *Terrain) Update(colorShader *shaders.ColorShader) {
 	}
 }
 
-func (t *Terrain) Render(colorShader *shaders.ColorShader) {
+func (t *Terrain) Render(colorShader *shaders.ColorShader, frustum *gfx.Frustum) {
 	colorShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for _, c := range t.data {
+		if frustum != nil {
+			min, max := c.GetBounds()
+			if !frustum.IsBoxIn(min, max) {
+				continue
+			}
+		}
 		c.Render(colorShader)
 	}
 }
 
-func (t *Terrain) RenderDepth(depthShader *shaders.DepthShader) {
+func (t *Terrain) RenderDepth(depthShader *shaders.DepthShader, frustum *gfx.Frustum) {
 	depthShader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for _, c := range t.data {
+		if frustum != nil {
+			min, max := c.GetBounds()
+			if !frustum.IsBoxIn(min, max) {
+				continue
+			}
+		}
 		c.RenderDepth(depthShader)
 	}
 }
 
-func (t *Terrain) RenderPointLightDepth(shader *shaders.PointLightShadowShader) {
+func (t *Terrain) RenderPointLightDepth(shader *shaders.PointLightShadowShader, frustum *gfx.Frustum) {
 	shader.Diffuse.Set(gl.TEXTURE0, 0, t.diffuse)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	for _, c := range t.data {
 		c.RenderPointLightDepth(shader)
 	}
+}
+
+func (t *Terrain) GetBounds() (mgl32.Vec3, mgl32.Vec3) {
+	// The terrain as a whole is too large to cull effectively.
+	// We handle culling per-cell in the renderer's loop if possible,
+	// but for the Renderable interface, we return a massive box.
+	return mgl32.Vec3{-1e9, -1e9, -1e9}, mgl32.Vec3{1e9, 1e9, 1e9}
 }

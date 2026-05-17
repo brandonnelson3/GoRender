@@ -90,15 +90,15 @@ uniform float cascadeDepthLimits[NUMBER_OF_CASCADES + 1];
 uniform vec3 firstPersonPosition;
 uniform vec3 firstPersonForward;
 uniform sampler2D diffuse;
-uniform sampler2D shadowMap1;
-uniform sampler2D shadowMap2;
-uniform sampler2D shadowMap3;
-uniform sampler2D shadowMap4;
-uniform sampler2D shadowMap5;
+uniform sampler2DShadow shadowMap1;
+uniform sampler2DShadow shadowMap2;
+uniform sampler2DShadow shadowMap3;
+uniform sampler2DShadow shadowMap4;
+uniform sampler2DShadow shadowMap5;
 
 // Point light shadows
 const int MAX_POINT_SHADOW_LIGHTS = 4;
-uniform samplerCubeArray pointShadowMaps;
+uniform samplerCubeArrayShadow pointShadowMaps;
 uniform int   numPointShadowLights;
 uniform vec3  pointShadowLightPositions[MAX_POINT_SHADOW_LIGHTS];
 uniform float pointShadowFarPlane;
@@ -124,31 +124,26 @@ float saturatef(float f) {
 	return clamp(f, 0.0, 1.0);
 }
 
-float getShadowFactor(int index, vec3 projCoords)
+float getShadowFactor(int index, vec3 projCoords, int radius)
 {		
 	float texelSize = 1.0 / shadowMapSize;
-	float currentDepth = projCoords.z;
-	float shadowFactor = 1.0f;
-	for (int i=-1; i<=1; i++) {
-		for (int j=-1; j<=1; j++) {
-			float shadowMapDepth = 0.0f;
-			if(index == 0) {
-				shadowMapDepth = texture(shadowMap1, projCoords.xy + vec2(i,j) * texelSize).x;
-			} else if(index == 1) {
-				shadowMapDepth = texture(shadowMap2, projCoords.xy + vec2(i,j) * texelSize).x;
-			} else if(index == 2) {
-				shadowMapDepth = texture(shadowMap3, projCoords.xy + vec2(i,j) * texelSize).x;
-			} else if(index == 3) {
-				shadowMapDepth = texture(shadowMap4, projCoords.xy + vec2(i,j) * texelSize).x;
-			} else {
-				shadowMapDepth = texture(shadowMap5, projCoords.xy + vec2(i,j) * texelSize).x;
-			}			
-			if (linearize(currentDepth) > linearize(shadowMapDepth)) {
-				shadowFactor -= 0.1f;
-			}
+	float shadowFactor = 0.0f;
+	float count = 0.0;
+	
+	// Hardware PCF (2x2) is already applied by texture() for sampler2DShadow.
+	// We still loop a bit for even smoother results (softening the 2x2 edges).
+	for (int i=-radius; i<=radius; i++) {
+		for (int j=-radius; j<=radius; j++) {
+			vec3 shadowUV = vec3(projCoords.xy + vec2(i,j) * texelSize, projCoords.z);
+			if(index == 0) shadowFactor += texture(shadowMap1, shadowUV);
+			else if(index == 1) shadowFactor += texture(shadowMap2, shadowUV);
+			else if(index == 2) shadowFactor += texture(shadowMap3, shadowUV);
+			else if(index == 3) shadowFactor += texture(shadowMap4, shadowUV);
+			else shadowFactor += texture(shadowMap5, shadowUV);
+			count += 1.0;
 		}
 	}
-	return shadowFactor;
+	return shadowFactor / count;
 }
 
 // Poisson disk samples for softening point light shadows (12 samples).
@@ -174,22 +169,23 @@ float getPointShadowFactor(int slot, vec3 worldPos, vec3 normal) {
 	float currentDepth = length(fragToLight);
 	
 	vec3 lightDir = normalize(-fragToLight);
-	// Normal-dependent bias to reduce acne and leaking at edges.
 	float bias = max(0.15 * (1.0 - dot(normal, lightDir)), 0.05); 
 	
 	float shadow = 0.0;
-	float samples = 12.0;
-	float diskRadius = 0.05; // Fixed small radius for consistent blur.
+	// Distant point shadows use fewer samples.
+	int samples = (currentDepth > 30.0) ? 4 : 12;
+	float diskRadius = 0.05;
 	
-	for(int i = 0; i < 12; ++i) {
-		float closestDepth = texture(pointShadowMaps, vec4(fragToLight + poissonDisk[i] * diskRadius, slot)).r;
-		closestDepth *= pointShadowFarPlane;
-		if(currentDepth - bias > closestDepth) {
-			shadow += 1.0;
-		}
+	for(int i = 0; i < samples; ++i) {
+		vec4 shadowUV = vec4(fragToLight + poissonDisk[i] * diskRadius, slot);
+		// samplerCubeArrayShadow texture() takes vec4(dir, layer) and a reference depth as the last arg.
+		// Wait, for samplerCubeArrayShadow it's texture(sampler, vec4(dir, layer), ref)?
+		// Actually it's texture(sampler, vec4(dir, layer), ref).
+		shadow += texture(pointShadowMaps, shadowUV, (currentDepth - bias) / pointShadowFarPlane);
 	}
-	return 1.0 - (shadow / samples);
+	return shadow / float(samples);
 }
+
 
 void main() {
 	ivec2 location = ivec2(gl_FragCoord.xy);
@@ -267,7 +263,9 @@ void main() {
 		
 		float shadowFactor = 1.0f;	
 		if (shadowIndex != 5) {
-			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex]);
+			// Distant cascades use fewer samples (radius 0 or 1).
+			int radius = (shadowIndex > 2) ? 0 : 1;
+			shadowFactor = getShadowFactor(shadowIndex, shadowCoords[shadowIndex], radius);
 		}		
 		
 		vec3 ambientLight = directionalLight.color * directionalLight.brightness * 0.2f;
