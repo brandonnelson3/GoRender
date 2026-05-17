@@ -43,7 +43,18 @@ var (
 	// pointShadowLightPositions is a flat float32 slice of the shadow-casting light positions,
 	// indexed by shadow slot. Kept in sync with shadowLightIndices.
 	pointShadowLightPositions [MaxPointLightShadows * 3]float32
+
+	// Caching states to prevent re-rendering static cubemaps
+	lastShadowLightIndices    [MaxPointLightShadows]int
+	lastShadowLightPositions  [MaxPointLightShadows]mgl32.Vec3
+	shadowSlotRenderedObjects [MaxPointLightShadows][]RenderedObjectState
 )
+
+// RenderedObjectState holds the cached bounds of a rendered object to detect movement.
+type RenderedObjectState struct {
+	Renderable Renderable
+	Min, Max   mgl32.Vec3
+}
 
 // PointLight represents all of the data about a PointLight.
 type PointLight struct {
@@ -60,11 +71,6 @@ type VisibleIndex struct {
 
 // InitPointLights sets up buffer space for light culling calculations and storage.
 func InitPointLights() {
-	AddPointLight(mgl32.Vec3{0, 12, 0}, mgl32.Vec3{1, 0, 0}, 1.0, 10.0)
-	AddPointLight(mgl32.Vec3{36, 12, 0}, mgl32.Vec3{0, 1, 0}, 1.0, 10.0)
-	AddPointLight(mgl32.Vec3{0, 12, 36}, mgl32.Vec3{0, 0, 1}, 1.0, 10.0)
-	AddPointLight(mgl32.Vec3{36, 12, 36}, mgl32.Vec3{1, 1, 0}, 1.0, 10.0)
-
 	// Prepare light buffers
 	gl.GenBuffers(1, &lightBuffer)
 	gl.GenBuffers(1, &visibleLightIndicesBuffer)
@@ -87,6 +93,8 @@ func InitPointLights() {
 func initPointLightShadows() {
 	for i := range shadowLightIndices {
 		shadowLightIndices[i] = -1
+		lastShadowLightIndices[i] = -1
+		shadowSlotRenderedObjects[i] = nil
 	}
 
 	gl.GenFramebuffers(1, &pointShadowFBO)
@@ -126,6 +134,11 @@ func ResetPointLights() {
 	numPointLights = 0
 	nextPointLightIndex = 0
 	mu.Unlock()
+
+	for i := range lastShadowLightIndices {
+		lastShadowLightIndices[i] = -1
+		shadowSlotRenderedObjects[i] = nil
+	}
 
 	gl.BindBuffer(gl.SHADER_STORAGE_BUFFER, lightBuffer)
 	gl.BufferData(gl.SHADER_STORAGE_BUFFER, MaximumPointLights*int(unsafe.Sizeof(PointLight{})), unsafe.Pointer(&PointLights), gl.DYNAMIC_DRAW)
@@ -259,4 +272,50 @@ func BuildPointLightCubemapMatrices(lightPos mgl32.Vec3) [6]mgl32.Mat4 {
 		proj.Mul4(mgl32.LookAtV(lightPos, lightPos.Add(mgl32.Vec3{0, 0, 1}), mgl32.Vec3{0, -1, 0})),
 		proj.Mul4(mgl32.LookAtV(lightPos, lightPos.Add(mgl32.Vec3{0, 0, -1}), mgl32.Vec3{0, -1, 0})),
 	}
+}
+
+// IsShadowSlotDirty returns true if the shadow slot needs to be re-rendered.
+// It also updates the last-rendered state for that slot.
+func IsShadowSlotDirty(slot int, intersecting []Renderable) bool {
+	lightIdx := shadowLightIndices[slot]
+	if lightIdx == -1 {
+		lastShadowLightIndices[slot] = -1
+		shadowSlotRenderedObjects[slot] = nil
+		return false
+	}
+
+	currentPos := PointLights[lightIdx].Position
+	dirty := lastShadowLightIndices[slot] != lightIdx ||
+		lastShadowLightPositions[slot].Sub(currentPos).LenSqr() > 0.0001 ||
+		len(intersecting) != len(shadowSlotRenderedObjects[slot])
+
+	if !dirty {
+		for i, currentObj := range intersecting {
+			prevObj := shadowSlotRenderedObjects[slot][i]
+			if prevObj.Renderable != currentObj {
+				dirty = true
+				break
+			}
+			min, max := currentObj.GetBounds()
+			if prevObj.Min != min || prevObj.Max != max {
+				dirty = true
+				break
+			}
+		}
+	}
+
+	if dirty {
+		lastShadowLightIndices[slot] = lightIdx
+		lastShadowLightPositions[slot] = currentPos
+		shadowSlotRenderedObjects[slot] = make([]RenderedObjectState, len(intersecting))
+		for i, currentObj := range intersecting {
+			min, max := currentObj.GetBounds()
+			shadowSlotRenderedObjects[slot][i] = RenderedObjectState{
+				Renderable: currentObj,
+				Min:        min,
+				Max:        max,
+			}
+		}
+	}
+	return dirty
 }

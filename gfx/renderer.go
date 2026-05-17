@@ -305,7 +305,6 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 		gl.FramebufferTexture(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, pointShadowArray, 0)
 		gl.DrawBuffer(gl.NONE)
 		gl.ReadBuffer(gl.NONE)
-		gl.Clear(gl.DEPTH_BUFFER_BIT)
 
 		// Upload all positions once.
 		renderer.pointLightShadowShader.LightPos.Set(&GetPointShadowLightPositions()[0], 4)
@@ -319,22 +318,45 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 			if lightIdx < 0 {
 				continue
 			}
+
 			lightPos := PointLights[lightIdx].Position
-			matrices := BuildPointLightCubemapMatrices(lightPos)
-
-			renderer.pointLightShadowShader.ShadowMatrices.Set(&matrices[0][0], 6)
-			renderer.pointLightShadowShader.ShadowLightIndex.Set(int32(slot))
-
 			lightRange := float32(PointShadowFarPlane)
+
+			// Gather all renderables intersecting the light's volume.
+			var intersecting []Renderable
 			for _, renderable := range renderables {
 				min, max := renderable.GetBounds()
-				// Simple sphere-AABB intersection or just distance check.
-				// For now, let's just check if the object is within the light's range box.
 				if min.X() > lightPos.X()+lightRange || max.X() < lightPos.X()-lightRange ||
 					min.Y() > lightPos.Y()+lightRange || max.Y() < lightPos.Y()-lightRange ||
 					min.Z() > lightPos.Z()+lightRange || max.Z() < lightPos.Z()-lightRange {
 					continue
 				}
+				intersecting = append(intersecting, renderable)
+			}
+
+			// ONLY render if the shadow map is dirty (light moved, slot reassigned, or an intersecting object moved/changed).
+			if !IsShadowSlotDirty(slot, intersecting) {
+				continue
+			}
+
+			// Clear only the 6 layers of this specific slot.
+			clearVal := float32(1.0)
+			gl.ClearTexSubImage(
+				pointShadowArray,
+				0,
+				0, 0, int32(slot*6),
+				pointShadowMapSize, pointShadowMapSize, 6,
+				gl.DEPTH_COMPONENT,
+				gl.FLOAT,
+				gl.Ptr(&clearVal),
+			)
+
+			matrices := BuildPointLightCubemapMatrices(lightPos)
+
+			renderer.pointLightShadowShader.ShadowMatrices.Set(&matrices[0][0], 6)
+			renderer.pointLightShadowShader.ShadowLightIndex.Set(int32(slot))
+
+			for _, renderable := range intersecting {
 				renderable.RenderPointLightDepth(renderer.pointLightShadowShader, nil)
 			}
 		}
