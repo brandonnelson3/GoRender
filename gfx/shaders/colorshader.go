@@ -102,6 +102,7 @@ uniform samplerCubeArrayShadow pointShadowMaps;
 uniform int   numPointShadowLights;
 uniform vec3  pointShadowLightPositions[MAX_POINT_SHADOW_LIGHTS];
 uniform float pointShadowFarPlane;
+const float POINT_SHADOW_BIAS_EPSILON = 0.002; // Small bias offset in normalized [0,1] space to prevent light leaking/bleeding at contacting geometry boundaries.
 
 in vec4 position;
 in vec3 worldPosition;
@@ -181,7 +182,7 @@ float getPointShadowFactor(int slot, vec3 worldPos, vec3 normal) {
 		// samplerCubeArrayShadow texture() takes vec4(dir, layer) and a reference depth as the last arg.
 		// Wait, for samplerCubeArrayShadow it's texture(sampler, vec4(dir, layer), ref)?
 		// Actually it's texture(sampler, vec4(dir, layer), ref).
-		shadow += texture(pointShadowMaps, shadowUV, (currentDepth - bias) / pointShadowFarPlane);
+		shadow += texture(pointShadowMaps, shadowUV, (currentDepth - bias) / pointShadowFarPlane + POINT_SHADOW_BIAS_EPSILON);
 	}
 	return shadow / float(samples);
 }
