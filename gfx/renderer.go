@@ -441,6 +441,7 @@ func (renderer *r) Render(sky *Sky, renderables []Renderable) {
 	}
 
 	RenderPip()
+	RenderHUD()
 	RenderFPS()
 	benchmark.End("Render: Debug Overlays")
 }
